@@ -5,6 +5,8 @@
 	"exports" : "./dist/index.modern.js",
 	"types": "./dist/index.d.ts",
 	"tsbundle" : {
-		"./src/index" : "./dist/index"
+		"./src/index.ts" : {
+			"output" : "./dist"
+		}
 	}
 }

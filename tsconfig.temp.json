@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "/Users/zouloux/Documents/local/framework/tsbundle/tests/testB/src/index.ts"
+  ],
+  "exclude": [
+    "/Users/zouloux/Documents/local/framework/tsbundle/tests/testB/node_modules"
+  ],
+  "compilerOptions": {
+    "outDir": "/Users/zouloux/Documents/local/framework/tsbundle/tests/testB/dist"
+  }
+}

@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "description": "Compile your Typescript libraries to ESM and CommonJS.",
   "main": "src/tsbundle.js",
-  "bin" : {
-    "tsbundle" : "src/cli.js"
+  "bin": {
+    "tsbundle": "src/cli.js"
   },
   "scripts": {
     "test": "node src/cli.js build ./tests/testB/"
   },
   "devDependencies": {
     "@solid-js/cli": "^1.7.5",
+    "@solid-js/files": "^2.2.1",
     "@types/node": "^18.0.0",
     "filesize": "^9.0.9",
     "glob": "^8.0.3",
