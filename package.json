@@ -1,10 +1,22 @@
 {
   "name": "@zouloux/tsbundle",
   "version": "0.1.0",
-  "description": "",
-  "main": "tsbundle.js",
+  "description": "Compile your Typescript libraries to ESM and CommonJS.",
+  "main": "src/tsbundle.js",
+  "bin" : {
+    "tsbundle" : "src/cli.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node src/cli.js build ./tests/testB/"
+  },
+  "devDependencies": {
+    "@solid-js/cli": "^1.7.5",
+    "@types/node": "^18.0.0",
+    "filesize": "^9.0.9",
+    "glob": "^8.0.3",
+    "rimraf": "^3.0.2",
+    "terser": "^5.14.1",
+    "typescript": "^4.7.4"
   },
   "repository": {
     "type": "git",
@@ -14,6 +26,7 @@
     "library",
     "bundle",
     "typescript",
+    "javascript",
     "ts",
     "esm",
     "commonjs",

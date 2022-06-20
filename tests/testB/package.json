@@ -1,0 +1,10 @@
+{
+	"name" : "ts-bundle-test-lib-B",
+	"main" : "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"exports" : "./dist/index.modern.js",
+	"types": "./dist/index.d.ts",
+	"tsbundle" : {
+		"./src/index" : "./dist/index"
+	}
+}
