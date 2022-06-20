@@ -13,13 +13,8 @@
 
 		// ------------------------------------------------------------------------- OUTPUT
 
-		// Compile typescript files to ready-to-use es next files
-		// build.js will build es next modules (.mjs) and commonjs (.js) files
-		"target": "es2019", // backward compatible for Node12 ( ex : nullish coalescing operator )
-		"moduleResolution": "node",
-
-		// Create d.ts files from typescript files
-		"declaration": true,
+		// Do not create d.ts files from typescript files
+		"declaration": false,
 
 		// Keep as much as source code into generated files.
 		"removeComments": false,

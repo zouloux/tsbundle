@@ -1,16 +1,11 @@
 {
 	"name" : "ts-bundle-test-lib-A",
 	"tsbundle" : {
-		"config" : {
-			"output" : "dist/",
-			"esm" : true,
-			"cjs" : true
+		"./src/split-test.ts" : {
+			"output" : "dist/"
 		},
-		"bundles" : {
-			"src/split-test.ts" : {
-				"output" : "dist/"
-			},
-			"src/standalone-test.ts" : {}
+		"./src/standalone-test.ts" : {
+			"output" : "dist/"
 		}
 	}
 }

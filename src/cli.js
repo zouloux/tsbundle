@@ -6,7 +6,8 @@ const { recursiveChangeExtension } = require( "./common/builder" );
 
 // -----------------------------------------------------------------------------
 
-async function buildPackage ( packageConfig ) {
+// TODO : Move to common/builder.js #refacto a bit more
+async function buildPackage ( packageConfig, progressHandler = function () {} ) {
 	/**
 	 * TODO
 	 * - Clean dist before each compile
@@ -27,13 +28,14 @@ async function buildPackage ( packageConfig ) {
 		const directory = new Directory( distPath )
 		await directory.clean();
 	}
+	progressHandler(0, 4)
 	// Browse package config files to compile
 	for ( const from in packageConfig.tsbundle ) {
 		// Target config and dist path
 		const currentConfig = packageConfig.tsbundle[ from ]
 		const distPath = path.join( packageRoot, currentConfig.output )
 		// Create a temporary tsconfig file for this package
-		// save it at tsbundle package's root
+		// and save it at tsbundle package's root
 		const tsconfigTempPath = path.join(tsBundleRoot, "tsconfig.temp.json")
 		const tsconfigTemp = new File( tsconfigTempPath )
 		tsconfigTemp.json({
@@ -47,16 +49,27 @@ async function buildPackage ( packageConfig ) {
 			}
 		})
 		await tsconfigTemp.save()
-
-
-		execSync(`tsc -p ${tsconfigTempPath} --declaration false --module esnext`, 3);
-		recursiveChangeExtension( distPath, '.js', '.module.mjs' );
-
-		execSync(`tsc -p ${tsconfigTempPath} --declaration true --module commonjs`, 3);
+		progressHandler(1, 4)
+		// Compiling commonjs module (require / module.exports) as ES2015
+		// - Promises with awaiter
+		// - Spread operator
+		// Also create declaration .d.ts file with this one
+		execSync(`tsc -p ${tsconfigTempPath} --declaration true --module commonjs --target ES2015`, 3);
 		recursiveChangeExtension( distPath, '.js', '.legacy.cjs' );
-
+		progressHandler(2, 4)
+		// Compiling ESNext module (import / export) as ES2019
+		// - Native promises
+		// - Spread operator
+		execSync(`tsc -p ${tsconfigTempPath} --module esnext --target ES2019`, 3);
+		recursiveChangeExtension( distPath, '.js', '.module.mjs' );
+		progressHandler(3, 4)
+		// Compile ESNext modules as modern JS (ES2022)
+		// - Native promises
+		// - Spread operator
+		// - Nullish coalescing operator
 		execSync(`tsc -p ${tsconfigTempPath} --declaration false --module esnext --target es2022`, 3);
 		recursiveChangeExtension( distPath, '.js', '.modern.js' );
+		progressHandler(4, 4)
 	}
 
 }
@@ -79,11 +92,7 @@ CLICommands.add("build", () => {
 	browsePackages( packages, async (key, config) => {
 		//console.log(key, config)
 		await tryTask(`Building ${key}`, async task => {
-			task.progress(0, 10)
-			await buildPackage( config )
-			task.progress(5, 10)
-			await buildPackage( config )
-			task.success()
+			await buildPackage( config, task.progress )
 		})
 		// await oraTask(`Building ${key}`, task => {
 		//
