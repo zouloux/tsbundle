@@ -1,0 +1,29 @@
+{
+  "name": "@zouloux/tsbundle",
+  "version": "0.1.0",
+  "description": "",
+  "main": "tsbundle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zouloux/tsbundle.git"
+  },
+  "keywords": [
+    "library",
+    "bundle",
+    "typescript",
+    "ts",
+    "esm",
+    "commonjs",
+    "cjs",
+    "tsc"
+  ],
+  "author": "Alexis Bouhet (ZoulouX)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zouloux/tsbundle/issues"
+  },
+  "homepage": "https://github.com/zouloux/tsbundle#readme"
+}
