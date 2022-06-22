@@ -1,5 +1,5 @@
 {
-	"name" : "ts-bundle-test-lib-B",
+	"name" : "tsbundle-test-lib-single",
 	"main" : "./dist/index.cjs",
 	"module": "./dist/index.mjs",
 	"exports" : "./dist/index.modern.js",

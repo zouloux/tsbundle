@@ -1,0 +1,13 @@
+{
+	"name" : "tsbundle-test-lib-multi",
+	"tsbundle" : {
+		"files" : {
+			"./src/split-test.ts" : {
+				"output" : "dist/"
+			},
+			"./src/standalone-test.ts" : {
+				"output" : "dist/"
+			}
+		}
+	}
+}
