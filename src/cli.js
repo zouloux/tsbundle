@@ -1,18 +1,28 @@
 const { CLICommands, nicePrint, tryTask, execSync } = require("@solid-js/cli")
-const { untab } = require("@solid-js/core")
 const path = require("path")
 const { browsePackages, targetPackagesFromCli } = require( "./common/cli-utils" );
 const { File, Directory } = require("@solid-js/files")
 const { recursiveChangeExtension } = require( "./common/builder" );
+const zlib = require( "zlib" );
+const fs = require( "fs" );
 
 // -----------------------------------------------------------------------------
 
+/**
+ * INSPIRATION & RESOURCES
+ * - microbundle : https://github.com/developit/microbundle
+ * - enabling modern js on npm : https://jasonformat.com/enabling-modern-js-on-npm/
+ * - tsconfig lib : https://www.typescriptlang.org/tsconfig#lib
+ * - tsconfig module : https://www.typescriptlang.org/tsconfig#module
+ */
 
 /**
- * CJS - Common js
+ * -- MODULE FORMATS --
+ *
+ * CJS - Common js - Legacy NodeJS module format
  * - require and module.exports functions
  *
- * MJS - Module JS
+ * MJS - Module JS - Modern NodeJS and Browser format
  * - import and export keywords
  */
 
@@ -46,13 +56,28 @@ const { recursiveChangeExtension } = require( "./common/builder" );
  * 👍 Nullish coalescing operator
  */
 
+// All terser options @see https://github.com/terser/terser
+const terserOptions = [
+	// Compress and shorten names
+	'--compress',
+	'--mangle',
+	// Set env as production for dead code elimination
+	'-d process.env.NODE_ENV=\"PRODUCTION\"',
+	// Keep class names and function names
+	'--keep_classnames',
+	'--keep_fnames',
+	// Allow top level mangling
+	'--toplevel',
+	// Threat as module (remove "use strict")
+	'--module',
+];
+
+
 // TODO : Move to common/builder.js #refacto a bit more
-async function buildPackage ( packageConfig, progressHandler = function () {} ) {
-	/**
-	 * TODO
-	 * - Clean dist before each compile
-	 * - Save cjs / esm / modern
-	 */
+async function buildPackage ( packageConfig, progressHandler = function () {}, forceFormats = [] ) {
+
+	// TODO : forceFormats which anihilate defaultFormats and format reading from package.json
+
 	// Target tsbundle package's root
 	const tsBundleRoot = path.normalize( path.join(__dirname, "/../") )
 	// Target package's root
@@ -61,17 +86,17 @@ async function buildPackage ( packageConfig, progressHandler = function () {} ) 
 	//const files = packageConfig.tsbundle.files ?? packageConfig.tsbundle
 	let defaultFormats = [
 		"es5.min.cjs",
-		"es2015.cjs",
 		"es2019.cjs",
-		"es2022.cjs",
-		"es2022.min.cjs",
-
-		"es5.min.mjs",
-		"es2015.mjs",
+		"es2019.min.cjs",
 		"es2019.mjs",
 		"es2022.mjs",
 		"es2022.min.mjs",
 	];
+	if ( !packageConfig.tsbundle ) {
+		// TODO : Full auto mode ?
+		throw new Error(`package.json needs a tsbundle propertyy`) // TODO : Better
+	}
+	// tsbundle as file list or as config root with a files property array
 	let files = packageConfig.tsbundle
 	if ( Array.isArray(packageConfig.tsbundle.files) ) {
 		files = packageConfig.tsbundle.files
@@ -95,6 +120,9 @@ async function buildPackage ( packageConfig, progressHandler = function () {} ) 
 			currentConfig.formats = defaultFormats
 		total += currentConfig.formats.length
 	}
+
+	let output = [] // FIXME
+
 	progressHandler(current, total)
 	// Browse package config files to compile
 	for ( const from in files ) {
@@ -116,24 +144,19 @@ async function buildPackage ( packageConfig, progressHandler = function () {} ) 
 			}
 		})
 		await tsconfigTemp.save()
-		progressHandler(++current, total)
+		progressHandler(++current, total, 'preparing')
 
 		currentConfig.formats.map( (format, i) => {
-			// console.log(format)
-			// Compiling commonjs module (require / module.exports) as ES2015
-			// - Promises with awaiter
-			// - Spread operator
-			// Also create declaration .d.ts file with this one
-
 			const split = format.split(".")
-
 			const target = split[0].toUpperCase()
-			const extension = split.length === 2 ? split[1] : split[2]
-			const module = extension === "cjs" ? "commonjs" : target
-			const minify = split.length === 3 && split[2] === "min"
-
+			let extension = split.length === 2 ? split[1] : split[2]
+			// Force commonjs as default module and extension
+			if ( extension === "js" )
+				extension = "cjs"
+			// Force esnext module if not CommonJS
+			const module = extension === "cjs" ? "commonjs" : "esnext"
+			const minify = split.length === 3 && split[1] === "min"
 			// FIXME : Some warning about module ES2022 not valid ?
-
 			const command = [
 				`tsc -p ${tsconfigTempPath}`,
 				`--declaration ${i === 0 ? 'true' : 'false'}`,
@@ -142,15 +165,30 @@ async function buildPackage ( packageConfig, progressHandler = function () {} ) 
 				`--lib DOM,${target}`,
 			].join(" ")
 
-			execSync(command, 3);
-			recursiveChangeExtension( distPath, '.js', '.'+format );
-			progressHandler( ++current, total, command )
+			execSync(command, 3); // FIXME : Catch errors
+			const changed = recursiveChangeExtension( distPath, '.js', '.'+format );
 
-			if ( minify ) {
-				// TODO : Terser and gz + report
+			// Target renamed file, if no file were renamed, we have an issue
+			const generatedFile = changed[ Object.keys(changed)[0] ]
+			if ( !generatedFile ) {
+				throw new Error(`Unable to generate ...`) // fixme : better error
 			}
+			let afterCommand = `${module}@${target} ➡ ${ path.relative(packageRoot, generatedFile) }`
+
+			output[ generatedFile ] = [ fs.statSync( generatedFile ).size ]
+
+			// Terser
+			if ( minify ) {
+				progressHandler( current + .5, total, afterCommand )
+				execSync(`node_modules/.bin/terser ${terserOptions.join(' ')} -o ${generatedFile} -- ${generatedFile}`);
+				output[ generatedFile ].push( zlib.gzipSync( fs.readFileSync(generatedFile) ).length )
+			}
+
+			progressHandler( ++current, total, afterCommand )
 		})
 	}
+
+	console.log(output)
 
 }
 

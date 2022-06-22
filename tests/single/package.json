@@ -6,7 +6,8 @@
 	"types": "./dist/index.d.ts",
 	"tsbundle" : {
 		"./src/index.ts" : {
-			"output" : "./dist"
+			"output" : "./dist",
+			"_formats" : ["es5.min.js"]
 		}
 	}
 }

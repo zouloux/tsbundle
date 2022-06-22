@@ -7,7 +7,7 @@
     "tsbundle": "src/cli.js"
   },
   "scripts": {
-    "test": "node src/cli.js build ./tests/single/ ./tests/multi/"
+    "test": "node src/cli.js build ./tests/single/"
   },
   "devDependencies": {
     "@solid-js/cli": "^1.7.5",
