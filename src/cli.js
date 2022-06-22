@@ -1,10 +1,11 @@
-const { CLICommands, nicePrint, tryTask, execSync } = require("@solid-js/cli")
+const { CLICommands, nicePrint, tryTask, execSync, table, newLine } = require("@solid-js/cli")
 const path = require("path")
 const { browsePackages, targetPackagesFromCli } = require( "./common/cli-utils" );
 const { File, Directory } = require("@solid-js/files")
 const { recursiveChangeExtension } = require( "./common/builder" );
 const zlib = require( "zlib" );
 const fs = require( "fs" );
+const chalk = require("chalk")
 
 // -----------------------------------------------------------------------------
 
@@ -72,36 +73,42 @@ const terserOptions = [
 	'--module',
 ];
 
+const defaultFormats = [
+	"es5.min.cjs",
+	"es2019.cjs",
+	"es2019.min.cjs",
+	"es2019.mjs",
+	"es2022.mjs",
+	"es2022.min.mjs",
+]
+
+function humanFileSize ( size ) {
+	if (size > 1000)
+		size = ~~(size / 10) / 100 + 'k'
+	return size + 'b'
+}
+
 
 // TODO : Move to common/builder.js #refacto a bit more
 async function buildPackage ( packageConfig, progressHandler = function () {}, forceFormats = [] ) {
-
 	// TODO : forceFormats which anihilate defaultFormats and format reading from package.json
-
 	// Target tsbundle package's root
 	const tsBundleRoot = path.normalize( path.join(__dirname, "/../") )
-	// Target package's root
+	// Target package's root and check config validity
 	const packageRoot = packageConfig.__root
-	// Get tsbundle files config
-	//const files = packageConfig.tsbundle.files ?? packageConfig.tsbundle
-	let defaultFormats = [
-		"es5.min.cjs",
-		"es2019.cjs",
-		"es2019.min.cjs",
-		"es2019.mjs",
-		"es2022.mjs",
-		"es2022.min.mjs",
-	];
 	if ( !packageConfig.tsbundle ) {
 		// TODO : Full auto mode ?
-		throw new Error(`package.json needs a tsbundle propertyy`) // TODO : Better
+		// TODO : Better error message
+		throw new Error(`package.json needs a tsbundle property`)
 	}
+	// Default formats
+	let packageDefaultFormats = [ ...defaultFormats ];
 	// tsbundle as file list or as config root with a files property array
 	let files = packageConfig.tsbundle
 	if ( Array.isArray(packageConfig.tsbundle.files) ) {
 		files = packageConfig.tsbundle.files
 		if ( Array.isArray(packageConfig.tsbundle.formats) )
-			defaultFormats = packageConfig.tsbundle.formats
+			packageDefaultFormats = packageConfig.tsbundle.formats
 	}
 	// Empty all dist folders before compiling anything
 	// To avoid to delete something freshly compiled
@@ -117,12 +124,11 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 		await directory.clean();
 		// Target formats and count them
 		if ( !Array.isArray(currentConfig.formats) )
-			currentConfig.formats = defaultFormats
+			currentConfig.formats = packageDefaultFormats
 		total += currentConfig.formats.length
 	}
-
-	let output = [] // FIXME
-
+	// Size report output
+	const output = []
 	progressHandler(current, total)
 	// Browse package config files to compile
 	for ( const from in files ) {
@@ -145,7 +151,7 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 		})
 		await tsconfigTemp.save()
 		progressHandler(++current, total, 'preparing')
-
+		// Browse all formats to compile to
 		currentConfig.formats.map( (format, i) => {
 			const split = format.split(".")
 			const target = split[0].toUpperCase()
@@ -154,9 +160,10 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			if ( extension === "js" )
 				extension = "cjs"
 			// Force esnext module if not CommonJS
+			// FIXME : Allow UMD and AMD maybe ?
 			const module = extension === "cjs" ? "commonjs" : "esnext"
 			const minify = split.length === 3 && split[1] === "min"
-			// FIXME : Some warning about module ES2022 not valid ?
+			// Compile command and rename
 			const command = [
 				`tsc -p ${tsconfigTempPath}`,
 				`--declaration ${i === 0 ? 'true' : 'false'}`,
@@ -164,32 +171,43 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				`--target ${target}`,
 				`--lib DOM,${target}`,
 			].join(" ")
-
 			execSync(command, 3); // FIXME : Catch errors
 			const changed = recursiveChangeExtension( distPath, '.js', '.'+format );
-
 			// Target renamed file, if no file were renamed, we have an issue
 			const generatedFile = changed[ Object.keys(changed)[0] ]
-			if ( !generatedFile ) {
-				throw new Error(`Unable to generate ...`) // fixme : better error
-			}
-			let afterCommand = `${module}@${target} ➡ ${ path.relative(packageRoot, generatedFile) }`
-
-			output[ generatedFile ] = [ fs.statSync( generatedFile ).size ]
-
-			// Terser
+			// FIXME : better error
+			if ( !generatedFile )
+				throw new Error(`Unable to generate ...`)
+			// Messaged shown after progress bar
+			const relativeFileName = path.relative(packageRoot, generatedFile)
+			const afterMessage = `${module}@${target} ➡ ${ relativeFileName }`
+			const report = [
+				relativeFileName, module, target,
+				chalk.cyan(
+					humanFileSize( fs.statSync( generatedFile ).size )
+				)
+			]
+			// Minify if .min extension is found
 			if ( minify ) {
-				progressHandler( current + .5, total, afterCommand )
+				progressHandler( current + .5, total, afterMessage )
 				execSync(`node_modules/.bin/terser ${terserOptions.join(' ')} -o ${generatedFile} -- ${generatedFile}`);
-				output[ generatedFile ].push( zlib.gzipSync( fs.readFileSync(generatedFile) ).length )
+				// Add gzipped size to output
+				const gzip = zlib.gzipSync( fs.readFileSync(generatedFile) )
+				report.push(
+					chalk.cyan.bold( humanFileSize( gzip.length ) )
+				)
 			}
-
-			progressHandler( ++current, total, afterCommand )
+			else {
+				report.push("-")
+			}
+			// Add file size to output
+			output.push( report )
+			progressHandler( ++current, total, afterMessage )
 		})
+		// Remove tsconfig file
+		await tsconfigTemp.delete()
 	}
-
-	console.log(output)
-
+	return output
 }
 
 // ----------------------------------------------------------------------------- COMMANDS
@@ -206,16 +224,22 @@ CLICommands.before((cliOptions, cliArguments) => {
 	packages = targetPackagesFromCli( cliOptions, cliArguments )
 })
 
-CLICommands.add("build", () => {
-	browsePackages( packages, async (key, config) => {
+CLICommands.add("build", async () => {
+	let output = []
+	await browsePackages( packages, async (key, config) => {
 		//console.log(key, config)
 		await tryTask(`Building ${key}`, async task => {
-			await buildPackage( config, task.progress )
+			output.push( await buildPackage( config, task.progress ) )
 		})
-		// await oraTask(`Building ${key}`, task => {
-		//
-		// })
 	})
+
+	newLine()
+	output = [
+		["File", "Module", "Target", "Size", "GZip"],
+		...output.flat()
+	]
+	table(output, true, [20], '    ' )
+	newLine()
 })
 CLICommands.add("dev", () => {
 
