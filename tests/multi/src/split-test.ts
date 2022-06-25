@@ -1,5 +1,5 @@
-export * from "./included"
+import { includedMethod } from "./included";
 
 export function fromIndex () {
-	return 42
+	return 42 + includedMethod().test
 }

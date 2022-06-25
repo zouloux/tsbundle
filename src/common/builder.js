@@ -143,7 +143,7 @@ exports.testLibrary = function ( libraryName )
 /**
  * Utility to recursively change files extensions into a folder
  */
-exports.recursiveChangeExtension = function ( dir, from, to ) {
+exports.recursiveChangeExtension = function ( dir, from, to, multipleDots = false ) {
 	const changed = {}
 	// Browse this folder
 	fs.readdirSync( dir ).forEach( f => {
@@ -156,7 +156,11 @@ exports.recursiveChangeExtension = function ( dir, from, to ) {
 			exports.recursiveChangeExtension( filePath, from, to );
 
 		// Rename if this is searched type of file
-		else if ( path.extname( f ) === from ) {
+		else if (
+			multipleDots
+			? path.basename( f ).lastIndexOf( from ) === f.length - from.length
+			: path.extname( f ) === from
+		) {
 			const destinationPath = filePath.replace(from, to)
 			fs.renameSync( filePath, destinationPath );
 			changed[ filePath ] = destinationPath;

@@ -1,10 +1,14 @@
 
 export interface IIncludedType {
-	test:boolean
+	test:number
 }
 
 export function includedMethod ():IIncludedType {
 	return {
-		test: true
+		test: 42
 	}
+}
+
+export function notIncludeded () {
+	return "ok"
 }

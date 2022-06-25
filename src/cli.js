@@ -105,7 +105,7 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 	let packageDefaultFormats = [ ...defaultFormats ];
 	// tsbundle as file list or as config root with a files property array
 	let files = packageConfig.tsbundle
-	if ( Array.isArray(packageConfig.tsbundle.files) ) {
+	if ( typeof packageConfig.tsbundle.files === "object" ) {
 		files = packageConfig.tsbundle.files
 		if ( Array.isArray(packageConfig.tsbundle.formats) )
 			packageDefaultFormats = packageConfig.tsbundle.formats
@@ -139,14 +139,16 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 		// and save it at tsbundle package's root
 		const tsconfigTempPath = path.join(tsBundleRoot, "tsconfig.temp.json")
 		const tsconfigTemp = new File( tsconfigTempPath )
+		const rootFilePath = path.join(packageRoot, from)
+		const outDirPath = path.join(packageRoot, currentConfig.output)
 		tsconfigTemp.json({
 			"extends": "./tsconfig.json",
-			"include": [ path.join(packageRoot, from) ],
+			"include": [ rootFilePath ],
 			"exclude" : [
 				path.join(packageRoot, "node_modules")
 			],
 			"compilerOptions" : {
-				"outDir" : path.join(packageRoot, currentConfig.output),
+				"outDir" : outDirPath,
 			}
 		})
 		await tsconfigTemp.save()
@@ -169,13 +171,13 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				`--declaration ${i === 0 ? 'true' : 'false'}`,
 				`--module ${module}`,
 				`--target ${target}`,
-				`--lib DOM,${target}`,
+				`--lib DOM,${target}`, // TODO : Load from tsconfig, should be overridable
 			].join(" ")
 			execSync(command, 3); // FIXME : Catch errors
 			const changed = recursiveChangeExtension( distPath, '.js', '.'+format );
 			// Target renamed file, if no file were renamed, we have an issue
 			const generatedFile = changed[ Object.keys(changed)[0] ]
-			// FIXME : better error
+			// FIXME : better check and better error
 			if ( !generatedFile )
 				throw new Error(`Unable to generate ...`)
 			// Messaged shown after progress bar
@@ -190,12 +192,27 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			// Minify if .min extension is found
 			if ( minify ) {
 				progressHandler( current + .5, total, afterMessage )
-				execSync(`node_modules/.bin/terser ${terserOptions.join(' ')} -o ${generatedFile} -- ${generatedFile}`);
+				const generatedFiles = Object.values( changed )
+				const parsed = path.parse( rootFilePath )
+				// Generated minified file from multiple files and mark it as "to rename"
+				// We do it that way so it's easy to rename all others files
+				const dest = path.join(outDirPath, parsed.name) + ".torename"
+				const terserCommand = [
+					`node_modules/.bin/terser`,
+					terserOptions.join(' '),
+					// `-o ${generatedFile}`,
+					`-o ${dest}`,
+					`-- ${generatedFiles.join(' ')}`
+				].join(" ")
+				execSync( terserCommand );
 				// Add gzipped size to output
 				const gzip = zlib.gzipSync( fs.readFileSync(generatedFile) )
-				report.push(
-					chalk.cyan.bold( humanFileSize( gzip.length ) )
-				)
+				report.push( chalk.cyan.bold( humanFileSize( gzip.length ) ) )
+				// Mark source files (before terser) as to delete
+				// We do not do it right now because of async in a map (can be refactored if needed)
+				recursiveChangeExtension( distPath, '.'+format, '.todelete', true );
+				// Rename minified from to rename to the real format
+				recursiveChangeExtension( distPath, '.torename', '.'+format );
 			}
 			else {
 				report.push("-")
@@ -203,7 +220,11 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			// Add file size to output
 			output.push( report )
 			progressHandler( ++current, total, afterMessage )
-		})
+		});
+		// Delete files marked as "to delete"
+		const filesToDelete = await File.find( path.join(outDirPath, '**/*.todelete' ) );
+		for ( const f of filesToDelete )
+			await f.delete()
 		// Remove tsconfig file
 		await tsconfigTemp.delete()
 	}
