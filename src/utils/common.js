@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 
-// ----------------------------------------------------------------------------- READ PACKAGE.JSON FILES
+// -----------------------------------------------------------------------------
 
 exports.readPackageJSONFromProjectPath = function ( projectPath ) {
     const packageJsonPath = path.join( projectPath, 'package.json' )
@@ -19,4 +19,11 @@ exports.readPackageJSONFromProjectPath = function ( projectPath ) {
     if ( !("tsbundle" in packageData) )
         throw new Error(`${relativePackageJsonPath} does not contains tsbundle property. It should be an object with source as key and destination (without extension) as value.`)
     return packageData
+}
+
+
+exports.naiveHumanFileSize = function ( size ) {
+    if ( size > 1000 )
+        size = ~~(size / 10) / 100 + 'k'
+    return size + 'b'
 }

@@ -1,11 +1,13 @@
 const { CLICommands, nicePrint, tryTask, execSync, table, newLine } = require("@solid-js/cli")
 const path = require("path")
-const { browsePackages, targetPackagesFromCli } = require( "./common/cli-utils" );
+const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );
 const { File, Directory } = require("@solid-js/files")
-const { recursiveChangeExtension } = require( "./common/builder" );
+const { recursiveChangeExtension } = require( "./utils/builder" );
 const zlib = require( "zlib" );
 const fs = require( "fs" );
 const chalk = require("chalk")
+const { defaultTerserOptions, defaultFormats } = require( "./defaults" );
+const { naiveHumanFileSize } = require( "./utils/common" );
 
 // -----------------------------------------------------------------------------
 
@@ -59,39 +61,6 @@ const chalk = require("chalk")
  * 👍 Nullish coalescing operator
  */
 
-// All terser options @see https://github.com/terser/terser
-const terserOptions = [
-	// Compress and shorten names
-	'--compress',
-	'--mangle',
-	// Set env as production for dead code elimination
-	'-d process.env.NODE_ENV=\"PRODUCTION\"',
-	// Keep class names and function names
-	'--keep_classnames',
-	'--keep_fnames',
-	// Allow top level mangling
-	'--toplevel',
-	// Threat as module (remove "use strict")
-	'--module',
-];
-
-const defaultFormats = [
-	// Will default export a UMD bundled file (single output file) for browsers
-	// with ES2017 compatibility level (not going down to ES5 by default)
-	"es2017.min.js",
-	// Node v12 compatible, non bundled as CommonJS
-	"es2019.cjs",
-	// Modern output, non bundled, as modern modules
-	"es2022.mjs",
-]
-
-function naiveHumanFileSize ( size ) {
-	if ( size > 1000 )
-		size = ~~(size / 10) / 100 + 'k'
-	return size + 'b'
-}
-
-
 // TODO : Move to common/builder.js #refacto a bit more
 async function buildPackage ( packageConfig, progressHandler = function () {}, forceFormats = [] ) {
 	// TODO : forceFormats which anihilate defaultFormats and format reading from package.json
@@ -113,6 +82,7 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 	// Empty all dist folders before compiling anything
 	// To avoid to delete something freshly compiled
 	// (if multiple entries with same output directory for example)
+	// TODO : Extract clean and count method
 	let total = 0
 	let current = 0
 	for ( const from in files ) {
@@ -221,15 +191,22 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			const mainFilePathWithoutExtension = path.join(outDirPath, parsed.name)
 			// Messaged shown after progress bar
 			const afterMessage = `${module}@${target} ➡ ${ path.relative(packageRoot, mainFilePathWithoutExtension) }.js`
-			// Browse every generated files to add to the report
-			let report = []
-			Object.keys( changed ).map( key => {
-				const relativeFileName = path.relative(packageRoot, key)
-				report.push([
+			// Locally scoped helper to add an exported report for a specific file
+			function addFileReport (source, destination, gzip) {
+				const relativeFileName = path.relative(packageRoot, source)
+				const report = [
 					relativeFileName, module, target,
-					chalk.cyan( naiveHumanFileSize( fs.statSync( changed[key] ).size ) )
-				])
-			})
+					chalk.cyan( naiveHumanFileSize( fs.statSync( destination ).size ) )
+				]
+				// Add gzipped size to output
+				if (gzip) {
+					const gzip = zlib.gzipSync( fs.readFileSync( destination ) )
+					report.push( chalk.cyan.bold( naiveHumanFileSize( gzip.length ) ) )
+				}
+				else
+					report.push("-")
+				outputReports.push( report )
+			}
 			// If we need to bundle and minify this format
 			if ( minify ) {
 				progressHandler( current + .5, total, afterMessage )
@@ -238,7 +215,7 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				const destFilePath = `${mainFilePathWithoutExtension}.${format}.compressed`
 				const terserCommand = [
 					`node_modules/.bin/terser`,
-					terserOptions.join(' '),
+					defaultTerserOptions.join(' '),
 					// One output
 					`-o ${ destFilePath }`,
 					// Multiple inputs
@@ -247,19 +224,18 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				// Execute terser command
 				// FIXME : Catch errors, do it async ?
 				execSync( terserCommand, 3 );
-				// Add gzipped size to output
-				const gzip = zlib.gzipSync( fs.readFileSync(destFilePath) )
-				report[0].push( chalk.cyan.bold( naiveHumanFileSize( gzip.length ) ) )
+				addFileReport( `${mainFilePathWithoutExtension}.${format}`, destFilePath, true )
 				// Mark source files (before terser) as to delete
 				// We do not do it right now because of async in a map (can be refactored if needed)
 				recursiveChangeExtension( distPath, `.${format}.torename`, '.todelete', true );
 				recursiveChangeExtension( distPath, `.compressed`, '.torename', true );
 			}
+			// Multiple outputs
 			else {
-				report[0].push("-")
+				// Browse every generated files to add to the report
+				Object.keys( changed ).map( key => addFileReport( key, changed[key], false ) )
 			}
-			// Add file size to output
-			outputReports = [ ...outputReports, ...report ]
+			// Update progress
 			progressHandler( ++current, total, afterMessage )
 		});
 		// Delete files marked as "to delete"
@@ -276,12 +252,13 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 
 // ----------------------------------------------------------------------------- COMMANDS
 
+// TODO : Move it to @zouloux/node-toolbox
 function showIntroMessage () {
 	const tsbundlePackage = require(path.normalize(__dirname+"/../package.json"))
-	nicePrint(`{d}Using ${tsbundlePackage.name} v{b/d}${tsbundlePackage.version}`)
+	nicePrint(`{w}Using {w/b}${tsbundlePackage.name}{d} {w}v${tsbundlePackage.version}`)
 }
 
-// Get packages list and configs before all actions
+// Get packages list and configs before any action
 let packages = {}
 CLICommands.before((cliOptions, cliArguments) => {
 	showIntroMessage();
@@ -289,39 +266,35 @@ CLICommands.before((cliOptions, cliArguments) => {
 })
 
 CLICommands.add("build", async () => {
+	// Browse all packages from cli arguments
 	await browsePackages( packages, async (key, config) => {
-		//console.log(key, config)
+		// Build this packages
 		let output = []
 		await tryTask(`Building ${key}`, async task => {
 			output.push( await buildPackage( config, task.progress ) )
 		})
+		// Show report
 		newLine()
 		output = [
 			["File", "Module", "Target", "Size", "GZip"],
 			...output.flat()
 		]
-		table(output, true, [20], '    ' )
+		table(output, true, [20], '    ')
 		newLine()
 	})
 
 })
-CLICommands.add("dev", () => {
-
-})
 CLICommands.add("test", () => {
-
+	// TODO : Build only needed output and execute `npm run test` for specific package
 })
 CLICommands.add("clean", () => {
-
-})
-CLICommands.add("reset", () => {
-
-})
-CLICommands.add("link", () => {
-
+	// TODO : Extract clean function and execute it only here
 })
 CLICommands.add("publish", () => {
-
+	// TODO : Run test (with minimal building)
+	// TODO : If test passing : Ask for increment and message
+	// TODO : Then build everything (should pass because of test passing
+	// TODO : Then git push + npm publish
 })
 
 // Start CLI command listening
