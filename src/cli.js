@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 const { CLICommands, nicePrint, tryTask, execSync, table, newLine } = require("@solid-js/cli")
 const path = require("path")
 const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );
