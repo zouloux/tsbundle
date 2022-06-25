@@ -7,7 +7,7 @@
 	"tsbundle" : {
 		"./src/index.ts" : {
 			"output" : "./dist",
-			"_formats" : ["es5.min.js"]
+			"formats" : ["defaults", "es5.min.js"]
 		}
 	}
 }

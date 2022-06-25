@@ -1,15 +1,10 @@
 {
 	"name" : "tsbundle-test-lib-multi",
 	"tsbundle" : {
-		"formats" : [
-			"es2015.min.cjs"
-		],
 		"files" : {
 			"./src/split-test.ts" : {
 				"output" : "./dist/"
-			}
-		},
-		"_" : {
+			},
 			"./src/standalone-test.ts" : {
 				"output" : "dist/"
 			}

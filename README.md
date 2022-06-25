@@ -3,18 +3,23 @@
 
 Todo doc
 
+
+### Package.json fields
+
+Good source of info : https://areknawo.com/whats-what-package-json-cheatsheet/
+
 ### Roadmap
 
 
 #### 0.9-beta
-- Read package.json with tsbundle config
-- Compile to any module and any target with tsc only
-- Compile minified targets with gzip report
-- Load local tsconfig.json next to package.json which overrides tsbundle defaults
+👍 Read package.json with tsbundle config
+👍 Compile to any module and any target with tsc only
+👍 Compile minified targets with gzip report
+👍 Output bundled file for browsers
+👍 Output several linked files for node and bundlers
 
 #### 1.0-rc 
-- Output bundled file for browsers
-- Output several linked files for node and bundlers
+- Load local tsconfig.json next to package.json which overrides tsbundle defaults
 - Load .terserrc and override defaults
 - Full documentation
 - Example with defaults
