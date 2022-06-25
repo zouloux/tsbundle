@@ -1,6 +1,6 @@
 {
   "name": "@zouloux/tsbundle",
-  "version": "1.0.0-beta",
+  "version": "1.0.1-beta",
   "description": "Compile your Typescript libraries to ESM and CommonJS.",
   "main": "src/tsbundle.js",
   "bin": {

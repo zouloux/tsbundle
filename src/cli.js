@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 
 const { CLICommands, nicePrint, tryTask, execSync, table, newLine } = require("@solid-js/cli")
 const path = require("path")
