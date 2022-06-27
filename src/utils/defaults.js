@@ -4,8 +4,10 @@
 // @see https://github.com/terser/terser
 module.exports.defaultTerserOptions = [
 	// Compress and shorten names
-	'--compress',
-	'--mangle',
+	// '--compress',
+	// '--mangle',
+	'--no-compress',
+	'--no-mangle',
 	// Set env as production for dead code elimination
 	'-d process.env.NODE_ENV=\"PRODUCTION\"',
 	// Keep class names and function names
@@ -27,3 +29,6 @@ module.exports.defaultFormats = [
 	// Modern output, non bundled, as modern modules
 	"es2022.mjs",
 ]
+
+// https://regexr.com/6oi36
+module.exports.replaceImportsRegex = /(from|import\s*\(|require\s*\()\s*["']([.\/]*)([a-zA-Z0-9-_]*)(\..*)?["']/gmi

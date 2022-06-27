@@ -1,13 +1,20 @@
 {
 	"name" : "tsbundle-test-lib-multi",
 	"tsbundle" : {
-		"files" : {
-			"./src/split-test.ts" : {
-				"output" : "./dist/"
-			},
-			"./src/standalone-test.ts" : {
+		"files" : [
+			{
+				"input" : "./src/split-test.ts",
+				"output" : "./dist/",
+				"--formats" : ["es2020.mjs", "es2020.js", "es2020.min.mjs"],
+				"formats" : ["esnext.mjs", "es2020.cjs"]
+			}
+		],
+		"__" : [
+
+			{
+				"input" :  "./src/standalone-test.ts",
 				"output" : "dist/"
 			}
-		}
+		]
 	}
 }

@@ -1,9 +1,5 @@
 const path = require( "path" );
 const fs = require( "fs" );
-const rimraf = require( "rimraf" );
-const { execSync } = require( "@solid-js/cli" );
-const glob = require( "glob" );
-const zlib = require( "zlib" );
 
 /**
  * Utility to recursively change files extensions into a folder

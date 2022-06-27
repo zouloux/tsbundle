@@ -1,6 +1,6 @@
 const path = require( "path" );
 const { nicePrint } = require( "@solid-js/cli" );
-const { readPackageJSONFromProjectPath } = require( "./common" );
+const { readPackageJSONFromProjectPath, filterDuplicates } = require( "./common" );
 
 /**
  * Get project paths from cli options and arguments.
@@ -19,7 +19,7 @@ exports.getProjectsPaths = function ( cliOptions, cliArguments ) {
 	// Normalize paths (remove unneeded dots and slashes)
 	.map( path.normalize )
 	// Remove duplicates after normalization
-	.filter( (value, index, array ) => array.indexOf(value) === index )
+	.filter( filterDuplicates )
 }
 
 /**

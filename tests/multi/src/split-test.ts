@@ -1,5 +1,11 @@
 import { includedMethod } from "./included";
 export * from "./included"
-export function fromIndex () {
-	return 42 + includedMethod().test
+
+import fs from "fs"
+
+export function fromIndex ( base:number ) {
+	const a = !!fs.rmSync
+	return (a ? 1 : 0) + base + includedMethod().test
 }
+
+console.log( fromIndex(10) )

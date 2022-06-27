@@ -8,8 +8,8 @@ const { recursiveChangeExtension } = require( "./utils/builder" );
 const zlib = require( "zlib" );
 const fs = require( "fs" );
 const chalk = require("chalk")
-const { defaultTerserOptions, defaultFormats } = require( "./defaults" );
-const { naiveHumanFileSize } = require( "./utils/common" );
+const { defaultTerserOptions, defaultFormats, replaceImportsRegex } = require( "./utils/defaults" );
+const { naiveHumanFileSize, filterDuplicates } = require( "./utils/common" );
 
 // -----------------------------------------------------------------------------
 
@@ -22,13 +22,40 @@ const { naiveHumanFileSize } = require( "./utils/common" );
  */
 
 /**
+ * SOUCIS :
+ * - CJS et MJS : Il faut renomer les imports et require dans le code source avec une regex...
+ * 					Pas props
+ * 		SOLUTION : S'inspirer de solid ? Exporter juste .js et .mjs ont l'air de marcher,
+ * 					a voir avec node si ça marche dans les 2 cas
+ * - Browser : Terser à l'air d'inclure dans le désordre + il s'en fout des imports export
+ * 				et il les réinclus ce débile.
+ * 		SOLUTION : Faire un outFile sans modules en es2017 et terser ça ensuite avec un
+ * 					fallback es5 si possible en plus du es2017 ? Peut-être plus besoin d'es5
+ * IMPACTS :
+ * - Changer la conf
+ * 		{
+ * 		 	"commonjs" : "es2017" | false,
+ * 		 	"module" : "es2020" | false,
+ * 		 	"browser" : "es2017" | false -> + ça min derrière avec terser
+ * 		}
+ *
+ * -> C'est moins flexible mais on contrôle mieux les effets de bord
+ */
+
+/**
  * -- MODULE FORMATS --
  *
- * CJS - Common js - Legacy NodeJS module format
+ * CJS - Common js
+ * - Legacy NodeJS module format
  * - require and module.exports functions
  *
- * MJS - Module JS - Modern NodeJS and Browser format
+ * MJS - Module JS
+ * - Modern NodeJS and Browser format
  * - import and export keywords
+ *
+ * UMD - Universal Module Definition
+ * - Multiple system compatible format, mainly for legacy browsers and node.
+ * - Compatible with AMD, CommonJS, define / require / etc
  */
 
 /**
@@ -63,6 +90,17 @@ const { naiveHumanFileSize } = require( "./utils/common" );
  * 👍 Nullish coalescing operator
  */
 
+
+/**
+ * TODO
+ * - Node abstract version (not cli) should return an array of transformed files
+ * 		- Then cli should convert it to cli table with human file sizes
+ * 	 	- cli table shows wrong files. It should be clearer with input -> output(s)`
+ * - Refacto all this
+ */
+
+const targetBin = (bin) => path.join( __dirname, '..', 'node_modules', '.bin', bin )
+
 // TODO : Move to common/builder.js #refacto a bit more
 async function buildPackage ( packageConfig, progressHandler = function () {}, forceFormats = [] ) {
 	// TODO : forceFormats which anihilate defaultFormats and format reading from package.json
@@ -76,8 +114,11 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 	let packageDefaultFormats = [ ...defaultFormats ];
 	// tsbundle as file list or as config root with a files property array
 	let files = packageConfig.tsbundle
-	if ( typeof packageConfig.tsbundle.files === "object" ) {
+	let defaultOutput = "./dist/"
+	if ( Array.isArray(packageConfig.tsbundle.files) ) {
 		files = packageConfig.tsbundle.files
+		if ( packageConfig.tsbundle.output )
+			defaultOutput = packageConfig.tsbundle.output
 		if ( Array.isArray(packageConfig.tsbundle.formats) )
 			packageDefaultFormats = packageConfig.tsbundle.formats
 	}
@@ -87,10 +128,12 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 	// TODO : Extract clean and count method
 	let total = 0
 	let current = 0
-	for ( const from in files ) {
+	for ( const currentConfig of files ) {
 		// Target config and dist path
-		const currentConfig = files[ from ]
 		let { output, formats } = currentConfig
+		// Default output
+		if ( !output )
+			output = defaultOutput
 		const distPath = path.join( packageRoot, output )
 		// Check if output is valid to avoid destroying wrong folder !
 		if (
@@ -113,39 +156,41 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 		// Replace formats "default" string by defaults values
 		if ( formats.find( s => s.toLowerCase() === "defaults") )
 			formats = [ ...defaultFormats, ...formats.filter( s => s.toLowerCase() !== "defaults" ) ]
-		// Re-inject formats into config
+		// Re-inject formats and output into config
 		currentConfig.formats = formats
+		currentConfig.output = output
 		// Count total formats
 		total += formats.length
 	}
 	// Size report output
 	let outputReports = []
 	progressHandler(current, total)
+	// Remember all dist paths
+	const distPaths = []
 	// Browse package config files to compile
-	for ( const from in files ) {
+	for ( const currentConfig of  files ) {
 		// Target config and dist path
-		const currentConfig = files[ from ]
 		const distPath = path.join( packageRoot, currentConfig.output )
 		// Create a temporary tsconfig file for this package
 		// and save it at tsbundle package's root
 		const tsconfigTempPath = path.join(tsBundleRoot, "tsconfig.temp.json")
 		const tsconfigTemp = new File( tsconfigTempPath )
-		const rootFilePath = path.join(packageRoot, from)
+		const rootFilePath = path.join(packageRoot, currentConfig.input)
 		const outDirPath = path.join(packageRoot, currentConfig.output)
 		tsconfigTemp.json({
 			"extends": "./tsconfig.json",
 			"include": [ rootFilePath ],
-			"exclude" : [
-				path.join(packageRoot, "node_modules")
-			],
+			"exclude" : [ path.join(packageRoot, "node_modules") ],
 			"compilerOptions" : {
 				"outDir" : outDirPath,
+				// "outFile" : path.join(outDirPath, "test.js")
 			}
 		})
 		await tsconfigTemp.save()
 		progressHandler(++current, total, 'preparing')
 		// Browse all formats to compile to
-		currentConfig.formats.map( (format, i) => {
+		for ( let i in currentConfig.formats ) {
+			const format = currentConfig.formats[ i ]
 			// Split format to get composite info
 			const split = format.split(".")
 			if ( split.length < 2 )
@@ -164,27 +209,67 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				module = "esnext"
 			else
 				throw new Error(`format ${format} is invalid. Extension should be .cjs / .js or .mjs`)
+			// module = "none" // fixme
 			// If we need to minify and bundle output to one compressed file
 			// .min is always before extension and after format
 			const minify = split.length > 2 && split[ split.length - 2 ].toLowerCase() === "min"
+			// Configs can cancel type definition exports
+			const allowTypeDefinition = !('typeDefinition' in currentConfig) || currentConfig.typeDefinition === true
 			// Create tsc compile command
 			const command = [
-				`tsc -p ${tsconfigTempPath}`,
+				targetBin('tsc'),
+				`-p ${tsconfigTempPath}`,
 				// Export declaration only at first pass.
-				`--declaration ${i === 0 ? 'true' : 'false'}`,
+				`--declaration ${i === 0 && allowTypeDefinition ? 'true' : 'false'}`,
 				`--module ${module}`,
 				`--target ${target}`,
 				// TODO : Load from tsconfig, should be overridable
 				// FIXME : DOM should not be here
-				`--lib DOM,${target}`,
+				`--lib DOM,${target}`
 			].join(" ")
 			// Execute tsc command
 			// FIXME : Catch errors, do it async ?
 			execSync( command, 3 );
+			// Compute extension format to be compatible with modules and bundled files
+			// const formatExtension = minify ? format : extension
+			const formatExtension = format
 			// Rename to format + torename extension. We will rename everything correctly later
 			// we remove the .js info because tsc will always output .js no matter what.
 			// it's easier to manage by marking now and  distribute correct file extension later
-			const changed = recursiveChangeExtension( distPath, '.js', `.${format}.torename` );
+			const changed = recursiveChangeExtension( distPath, '.js', `.${formatExtension}.torename` );
+			// console.log( Object.keys( changed ) );
+
+			// console.log( baseNames );
+
+			const baseNames = Object.keys( changed ).map( p => path.parse(p).name )
+			for ( const source of Object.keys( changed ) ) {
+				const dest = changed[ source ]
+				const file = new File( dest )
+				await file.load();
+				// Keep node modules targets like
+				// - import fs from "fs"
+				// - import("fs")
+				// - require("fs"
+				// Add custom extension on targets like
+				// We detect that "module" is a local dependency thanks to baseNames
+				// - import { test } from "./module"
+				// - import { test } from "./module.js"
+				// - import { test } from "module.js"
+				// - import("module.js")
+				// - require("module.js")
+				file.content(
+					c => c.replaceAll(
+						replaceImportsRegex,
+						(...rest) => (
+							( baseNames.indexOf(rest[3]) === -1)
+							? rest[0]
+							: `${rest[1]} "${rest[2]}${rest[3]}.${formatExtension}"`
+						)
+					)
+				)
+				await file.save();
+			}
+
 			// No file were output by tsc
 			if ( Object.values(changed).length === 0 )
 				throw new Error(`Error, no file were generated by tsc for ${rootFilePath} with format ${format}`)
@@ -212,12 +297,12 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			// If we need to bundle and minify this format
 			if ( minify ) {
 				progressHandler( current + .5, total, afterMessage )
-				// Generated minified file from multiple files and mark it as "to rename"
-				// We do it that way so it's easy to rename all others files
-				const destFilePath = `${mainFilePathWithoutExtension}.${format}.compressed`
+				// Generated minified file from multiple files and mark it as "compressed"
+				// We do it that way so it's easy to separate terser source and output files
+				const destFilePath = `${mainFilePathWithoutExtension}.${formatExtension}.compressed`
 				const terserCommand = [
-					`node_modules/.bin/terser`,
-					defaultTerserOptions.join(' '),
+					targetBin('terser'),
+					...defaultTerserOptions,
 					// One output
 					`-o ${ destFilePath }`,
 					// Multiple inputs
@@ -226,10 +311,10 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 				// Execute terser command
 				// FIXME : Catch errors, do it async ?
 				execSync( terserCommand, 3 );
-				addFileReport( `${mainFilePathWithoutExtension}.${format}`, destFilePath, true )
-				// Mark source files (before terser) as to delete
-				// We do not do it right now because of async in a map (can be refactored if needed)
-				recursiveChangeExtension( distPath, `.${format}.torename`, '.todelete', true );
+				addFileReport( `${mainFilePathWithoutExtension}.${formatExtension}`, destFilePath, true )
+				// Delete terser source files
+				Object.values( changed ).map( p => fs.unlinkSync(p) )
+				// Mark output as to rename now we removed source files
 				recursiveChangeExtension( distPath, `.compressed`, '.torename', true );
 			}
 			// Multiple outputs
@@ -239,16 +324,17 @@ async function buildPackage ( packageConfig, progressHandler = function () {}, f
 			}
 			// Update progress
 			progressHandler( ++current, total, afterMessage )
-		});
-		// Delete files marked as "to delete"
-		const filesToDelete = await File.find( path.join(outDirPath, '**/*.todelete' ) );
-		for ( const f of filesToDelete )
-			await f.delete()
-		// Rename all files to rename
-		recursiveChangeExtension( distPath, '.torename', '' );
+		}
+		// Register this dist path to rename all files later
+		distPaths.push( distPath )
 		// Remove tsconfig file
 		await tsconfigTemp.delete()
 	}
+	// Rename all files now
+	// If we do it in the loop, we may rename files incorrectly
+	distPaths
+		.filter( filterDuplicates )
+		.map( p => recursiveChangeExtension( p, '.torename', '' ) )
 	return outputReports
 }
 

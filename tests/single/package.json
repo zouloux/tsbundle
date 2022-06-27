@@ -4,10 +4,11 @@
 	"module": "./dist/index.mjs",
 	"exports" : "./dist/index.modern.js",
 	"types": "./dist/index.d.ts",
-	"tsbundle" : {
-		"./src/index.ts" : {
+	"tsbundle" : [
+		{
+			"input" : "./src/index.ts",
 			"output" : "./dist",
 			"formats" : ["defaults", "es5.min.js"]
 		}
-	}
+	]
 }
