@@ -8,7 +8,8 @@
   },
   "scripts": {
     "--test": "node src/cli.js build ./tests/single/ ./tests/multi/",
-    "test": "node src/cli.js build ./tests/multi/"
+    "-test": "node src/cli.js build ./tests/multi/",
+    "test": "node src/cli.js build ./tests/single/"
   },
   "dependencies": {
     "@solid-js/cli": "^1.7.5",

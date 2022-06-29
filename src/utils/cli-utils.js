@@ -1,6 +1,6 @@
 const path = require( "path" );
 const { nicePrint } = require( "@solid-js/cli" );
-const { readPackageJSONFromProjectPath, filterDuplicates } = require( "./common" );
+const { filterDuplicates, readConfigFromProjectPath } = require( "./common" );
 
 /**
  * Get project paths from cli options and arguments.
@@ -37,14 +37,13 @@ exports.targetPackagesFromCli = function ( cliOptions, cliArguments ) {
 	// Browse them and check if we find any package.json
 	projects.map( projectPath => {
 		const absoluteProjectPath = path.join(process.cwd(), projectPath)
+		// Read package.json
 		try {
-			// Read package.json and inject normalized absolute root
-			const config = readPackageJSONFromProjectPath( absoluteProjectPath )
-			config["__root"] = absoluteProjectPath
-			projectsPackageJsons[ projectPath ] = config
+			projectsPackageJsons[ projectPath ] = readConfigFromProjectPath( absoluteProjectPath )
 		}
 		// Invalid package.json
 		catch (e) {
+			console.error( e )
 			nicePrint(`{b/r}${e.message}`, { code: 2 })
 		}
 	})

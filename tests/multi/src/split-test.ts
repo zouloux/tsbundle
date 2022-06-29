@@ -1,11 +1,15 @@
+// Test local dependencies with extension replacement
 import { includedMethod } from "./included";
-export * from "./included"
+//export * from "./included"
+import { zOrderTest } from "./z-order-test";
+// Test with node lib
+// import path from "path"
+// TODO : Test with node_modules libs (should keep same input like node lib)
 
-import fs from "fs"
 
 export function fromIndex ( base:number ) {
-	const a = !!fs.rmSync
-	return (a ? 1 : 0) + base + includedMethod().test
+	// return `${path.join("a", "b")} ${base} ${includedMethod().test} ${zOrderTest()}`
+	return `${base} ${includedMethod().test} ${zOrderTest()}`
 }
 
 console.log( fromIndex(10) )
