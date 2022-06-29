@@ -124,7 +124,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 		for ( const format of fileConfig.formats ) {
 			// Reset temp directory and prepare tsconfig for this file
 			await exports.resetTmpDirectory();
-			progressHandler("Preparing ts config", ++currentStep)
+			progressHandler("Preparing", ++currentStep)
 			const [ tsConfigPath, deleteTsConfig ] = await exports.createTsConfigForProject(
 				packageConfig.packageRoot, fileConfig.input, outputPath
 			);
@@ -161,7 +161,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			const entryPointName = path.parse( fileConfig.input ).name
 			//const mainOutputFilePath = path.join( outputPath, entryPointName + moduleExtension )
 			// Progress
-			progressHandler(`Compiling ${path.basename(fileConfig.input)}`, ++currentStep)
+			progressHandler(`Compiling ${path.basename(fileConfig.input)} - ${format}`, ++currentStep)
 			// Split format to get composite info
 			// Create tsc compile command
 			const tscCommand = [
@@ -188,13 +188,13 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			const distOutput = path.join( packageConfig.packageRoot, fileConfig.output );
 			// If we need to bundle and minify output
 			if ( bundleAndMinifyOutput ) {
-				const [ inputFiles, generatedFiles ] = await exports.patchPathsAndRenameExportedFiles( outputPath, '' );
 				const minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
 				const mainInputPath = path.join( outputPath, entryPointName )
-				progressHandler(`Bundling ${path.basename(fileConfig.input)}`, ++currentStep)
+				progressHandler(`Bundling ${path.basename(minifiedFilePath)}`, ++currentStep)
+				const [ inputFiles, generatedFiles ] = await exports.patchPathsAndRenameExportedFiles( outputPath, '' );
 				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName )
 				// Compress and minify output
-				progressHandler(`Compressing ${path.basename(fileConfig.input)}`, ++currentStep)
+				progressHandler(`Compressing ${path.basename(minifiedFilePath)}`, ++currentStep)
 				const terserCommand = [
 					targetBin('terser'),
 					...defaultTerserOptions,
@@ -211,12 +211,16 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				}
 				// Export to output path
 				// Move minified
+				progressHandler(`Exporting ${path.basename(minifiedFilePath)} to ${ fileConfig.output }`, ++currentStep)
 				await fs.promises.rename(
 					minifiedFilePath,
 					path.join( distOutput, path.basename(minifiedFilePath) )
 				)
 			}
 			else {
+				// Match same amount of steps than minifying
+				currentStep += 2
+				progressHandler(`Exporting ${path.basename(fileConfig.input)} to ${ fileConfig.output }`, ++currentStep)
 				// Patch extensions of files and patch extensions in require / imports
 				await exports.patchPathsAndRenameExportedFiles( outputPath, moduleExtension );
 				// Move all files to dist output

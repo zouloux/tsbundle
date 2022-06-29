@@ -5,27 +5,42 @@ const path = require("path")
  * TODO :
  * - Convert all require / define paths to numbers, to patch relativity (../)
  * 		and for smaller outputs.
+ * 		Only keep main bundle because can be included from other bundles ?
  * - Find a way to include dependencies when calling
  * 		(like if we have a dep to Signal for ex)
+ * TODO :
+ * - Better AMD implementation, which works with several bundles and dependencies ?
  */
+
+/**
+ * FIXME : Sometimes terser will remove IIFE wrapper.
+ * 			Which can pollute global scope.
+ * 			But it seems very edge case so treat only if it happens in a real case.
+ */
+
+// -----------------------------------------------------------------------------
 
 /**
  * Super light AMD implementation which is missing a lot of stuff
  * but should work for tsc outputs.
  * ES5 compatible, absolutely no error checking.
+ * TODO : Add fallback to native require if module is not found
  */
 const superLightAMDModuleSystem = `
-	const _registry = {}
-	function define ( modulePath, factory ) { _registry[ modulePath ] = factory }
-	function require ( modulePath ) {
-		const moduleFactory = _registry[ modulePath ]
-		if ( typeof moduleFactory === "function" ) {
-			let exports = {}
-			moduleFactory( module, exports );
-			_registry[ modulePath ] = exports
+	if ( typeof this.define === "undefined" ) {
+		var _registry = {}
+		this.define = function ( modulePath, factory ) { _registry[ modulePath ] = factory }
+		this.require = function ( modulePath ) {
+			var moduleFactory = _registry[ modulePath ]
+			if ( typeof moduleFactory === "function" ) {
+				var exports = {}
+				moduleFactory( module, exports );
+				_registry[ modulePath ] = exports
+			}
+			return _registry[ modulePath ];
 		}
-		return _registry[ modulePath ];
 	}
+	require = this.require
 `
 
 exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, packageName ) {
@@ -49,7 +64,7 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 					filePath
 				)
 				return [
-					`define("./${relativeFilePath}", (module, exports) => {`,
+					`this.define("./${relativeFilePath}", (module, exports) => {`,
 					c,
 					`});`,
 				].join("\n")
@@ -60,12 +75,10 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	const entryPoint = path.basename(mainInputPath)
 	bundleStreamLines.push(
 		isMultiFiles
-		? `self["${packageName}"] = require("./${entryPoint}")`
-		: `self["${packageName}"] = exports`
-		// ? `return require("./${entryPoint}")`
-		// : `return exports`
+		? `this["${packageName}"] = require("./${entryPoint}")`
+		: `this["${packageName}"] = exports`
 	)
-	bundleStreamLines.push(`}( self )`)
+	bundleStreamLines.push(`}()`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
 	if ( isMultiFiles ) {

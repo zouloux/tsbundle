@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { CLICommands, nicePrint, tryTask, execSync, table, newLine } = require("@solid-js/cli")
+const { CLICommands, nicePrint, tryTask, execSync, table, newLine, oraTask } = require("@solid-js/cli")
 const path = require("path")
 const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );
 const { File, Directory } = require("@solid-js/files")
@@ -218,24 +218,27 @@ CLICommands.add("build", async () => {
 	// Browse all packages from cli arguments
 	await browsePackages( packages, async (key, packageConfig) => {
 		// console.log( packageConfig.files );
-		await buildPackage( packageConfig )
-
-		// // Build this packages
-		// let output = []
-		// await tryTask(`Building ${key}`, async task => {
-		// 	output.push( await buildPackage( config, task.progress ) )
-		// })
-		// // Show report
-		// newLine()
-		// output = [
-		// 	["File", "Module", "Target", "Size", "GZip"],
-		// 	...output.flat()
-		// ]
-		// table(output, true, [20], '    ')
-		// newLine()
+		await oraTask({ text: `Building ${key}` }, async taskUpdater => {
+			await buildPackage( packageConfig, (text, index) => {
+				taskUpdater.setAfterText( text )
+				taskUpdater.setProgress( index, packageConfig.total * 5 + 1 )
+			})
+			taskUpdater.success(`Built ${key}`)
+			// TODO
+			// // Show report
+			// newLine()
+			// output = [
+			// 	["File", "Module", "Target", "Size", "GZip"],
+			// 	...output.flat()
+			// ]
+			// table(output, true, [20], '    ')
+			// newLine()
+		})
 	})
-
 })
+
+
+
 CLICommands.add("test", () => {
 	// TODO : Build only needed output and execute `npm run test` for specific package
 })
