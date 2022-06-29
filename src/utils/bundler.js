@@ -2,6 +2,14 @@ const { File } = require( "@solid-js/files" );
 const path = require("path")
 
 /**
+ * TODO :
+ * - Convert all require / define paths to numbers, to patch relativity (../)
+ * 		and for smaller outputs.
+ * - Find a way to include dependencies when calling
+ * 		(like if we have a dep to Signal for ex)
+ */
+
+/**
  * Super light AMD implementation which is missing a lot of stuff
  * but should work for tsc outputs.
  * ES5 compatible, absolutely no error checking.

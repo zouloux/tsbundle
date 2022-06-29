@@ -116,14 +116,14 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 	// Prepare tmp
 	let currentStep = 0
 	progressHandler("Cleaning", currentStep)
-	await exports.resetTmpDirectory();
 	await exports.cleanOutputs( packageConfig )
 	const outputPath = targetBuilderPath('tmp')
 	// Browse files to compile
 	for ( const fileConfig of packageConfig.files ) {
 		let isFirstFormat = true
 		for ( const format of fileConfig.formats ) {
-			// Prepare tsconfig for this file
+			// Reset temp directory and prepare tsconfig for this file
+			await exports.resetTmpDirectory();
 			progressHandler("Preparing ts config", ++currentStep)
 			const [ tsConfigPath, deleteTsConfig ] = await exports.createTsConfigForProject(
 				packageConfig.packageRoot, fileConfig.input, outputPath
@@ -184,21 +184,15 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				await deleteTsConfig();
 				throw new Error(`Typescript error detected`, { cause: e })
 			}
-			// Patch extensions of files and patch extensions in require / imports
-			// await exports.patchPathsAndRenameExportedFiles( outputPath, moduleExtension );
-			const [ _, generatedFiles ] = await exports.patchPathsAndRenameExportedFiles( outputPath, '' );
-
+			await deleteTsConfig();
+			const distOutput = path.join( packageConfig.packageRoot, fileConfig.output );
 			// If we need to bundle and minify output
 			if ( bundleAndMinifyOutput ) {
-
+				const [ inputFiles, generatedFiles ] = await exports.patchPathsAndRenameExportedFiles( outputPath, '' );
 				const minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
 				const mainInputPath = path.join( outputPath, entryPointName )
-				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName )
-
-				// Convert output to dist/${name}.${format}.min.js
-				//const minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
 				progressHandler(`Bundling ${path.basename(fileConfig.input)}`, ++currentStep)
-
+				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName )
 				// Compress and minify output
 				progressHandler(`Compressing ${path.basename(fileConfig.input)}`, ++currentStep)
 				const terserCommand = [
@@ -213,34 +207,27 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 					await execAsync( terserCommand );
 				}
 				catch ( e ) {
-					await deleteTsConfig();
 					throw new Error(`Terser error detected`, { cause: e })
 				}
+				// Export to output path
 				// Move minified
 				await fs.promises.rename(
 					minifiedFilePath,
-					path.join( packageConfig.packageRoot, fileConfig.output, path.basename(minifiedFilePath) )
+					path.join( distOutput, path.basename(minifiedFilePath) )
 				)
 			}
-			// Export to output path
-			await deleteTsConfig();
-
-
+			else {
+				// Patch extensions of files and patch extensions in require / imports
+				await exports.patchPathsAndRenameExportedFiles( outputPath, moduleExtension );
+				// Move all files to dist output
+				const directory = new Directory( outputPath )
+				const children = await directory.children('all')
+				for ( const fileEntity of children )
+					await fileEntity.copyTo( distOutput + '/' )
+			}
+			await exports.resetTmpDirectory();
 			// TODO : Stats
+			// TODO : + Gzip stat for all files
 		}
 	}
-
-	// browse formats
-	//		resetTmpDirectory
-
-			// createTsConfig
-			// compile
-			// rename and patch (and get file list)
-			// if minify
-			//		browserify
-			//		minify
-			// deleteTsConfig
-
-	//		move to output
-	// Return stats
 }

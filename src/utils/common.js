@@ -91,18 +91,6 @@ exports.readConfigFromProjectPath = function ( projectPath ) {
         currentConfig.formats = formats
         currentConfig.output = output
         currentConfig.input = input
-
-        // if ( typeof generateTypeDefinitions === "undefined" )
-        //     currentConfig.generateTypeDefinitions = defaultGenerateTypeDefinitions
-        //
-        // if ( typeof reportGzipped === "undefined" )
-        //     currentConfig.reportGzipped = defaultReportGzipped
-        //
-        // // Configs can cancel type definition exports
-        // currentConfig.generateTypeDefinitions = (
-        //     !('generateTypeDefinitions' in currentConfig)
-        //     || currentConfig.generateTypeDefinitions === true
-        // )
         normalizedFileConfigs.push( currentConfig )
         // Add total formats to total count
         total += formats.length
@@ -110,7 +98,6 @@ exports.readConfigFromProjectPath = function ( projectPath ) {
     // Remove duplicates for output dist paths
     normalizedOutputs = normalizedOutputs.filter( exports.filterDuplicates )
     // Return normalized config
-    // TODO : Normalize all input and outputs in files objects ?
     return {
         packageRoot, total, normalizedOutputs,
         files: normalizedFileConfigs,
