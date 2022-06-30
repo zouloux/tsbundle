@@ -222,7 +222,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
 				progressHandler(`Bundling ${path.basename(minifiedFilePath)}`, ++currentStep);
 				generatedFiles = (await exports.patchPathsAndRenameExportedFiles( outputPath, '' )).output;
-				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, packageConfig.libraryName, fileConfig.libraryName )
+				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName, fileConfig.exportMap )
 				// Compress and minify output
 				progressHandler(`Compressing ${path.basename(minifiedFilePath)}`, ++currentStep)
 				const terserCommand = [

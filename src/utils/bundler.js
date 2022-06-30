@@ -39,15 +39,19 @@ const superLightAMDModuleSystem = `
 				moduleFactory( module, exports );
 				_registry[ modulePath ] = exports
 			}
-			return _registry[ modulePath ];
+			return def( _registry[ modulePath ] );
 		}
 	}
 	require = _.require
 `
 
-exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, packageName, shortPackageName ) {
-	// Create IIFE wrapper
-	let bundleStreamLines = ["!function (_) {"]
+exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, libraryName, exportMap ) {
+	let bundleStreamLines = [
+		// Create IIFE wrapper
+		"!function (_) {",
+		// Include default export target helper
+		`function def (a) { return a.default ? a.default : a }`
+	]
 	// Inject super light implementation of AMD if we have several files to bundle only
 	const isMultiFiles = allInputPaths.length > 1
 	if ( isMultiFiles )
@@ -78,12 +82,19 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	}
 	// Call entry point and end IIFE wrapper
 	const entryPoint = path.basename(mainInputPath)
-	if ( isMultiFiles )
+	if ( isMultiFiles ) {
 		bundleStreamLines.push(`var exports = require("./${entryPoint}")`)
-	// Declare library name in global scope
-	const inlinedDefaultExports = `exports.default ? exports.default : exports`
-	let key = shortPackageName ? shortPackageName : packageName
-	bundleStreamLines.push(`_["${key}"] = ${inlinedDefaultExports}`)
+	}
+	// Expose public exported members
+	if ( typeof exportMap === "object" && isMultiFiles ) {
+		Object.keys( exportMap ).map( key => {
+			bundleStreamLines.push(`_["${key}"] = require("${ exportMap[key] }")`)
+		})
+	}
+	else {
+		bundleStreamLines.push(`_["${libraryName}"] = def(exports)`)
+	}
+	// Close IIFE
 	bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : this)`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
