@@ -33,9 +33,9 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 
-		// Report error on missing return or fall through cases in switch
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
+		// Do not report error on missing return or fall through cases in switch
+		"noImplicitReturns": false,
+		"noFallthroughCasesInSwitch": false,
 
 		// Disallow file generation if there was a typescript error
 		"noEmitOnError": true,

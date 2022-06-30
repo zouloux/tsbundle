@@ -205,7 +205,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			isFirstFormat = false
 			// Execute tsc command
 			try {
-				await execAsync( tscCommand );
+				await execAsync( tscCommand, 3 );
 			}
 			catch ( e ) {
 				await deleteTsConfig();
@@ -234,7 +234,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				].join(" ")
 				// Execute terser command
 				try {
-					await execAsync( terserCommand );
+					await execAsync( terserCommand, 3 );
 				}
 				catch ( e ) {
 					throw new Error(`Terser error detected for ${minifiedFilePath}`, { cause: e })
