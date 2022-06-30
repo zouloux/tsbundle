@@ -5,10 +5,23 @@ const path = require("path")
 const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );
 const { buildPackage } = require( "./tsbundle" );
 
+// -----------------------------------------------------------------------------
+
 /**
- * TODO
+ * TODO 1.2.0 - Features
+ * 	- Allow bundle as <script module> with native export tag for modern browsers ?
+ * 		- Why not use non bundled version directly ? With http2 push it should work well.
+ * 	- Allow dependency inclusion from node_modules (like @zouloux/ecma-core for ex)
+ * 		- Also better interop if several bundle are loaded, need tests !
+ * 	- Ability to rename bundles ?
+ */
+/**
+ * TODO 1.3.0 - Config optioons
  * 	- tsconfig override
  * 	- terserrc override
+ */
+/**
+ * TODO 1.4.0 - Release and doc
  * 	- tsbundle test
  * 	- tsbundle clean
  * 	- tsbundle publish
@@ -18,7 +31,6 @@ const { buildPackage } = require( "./tsbundle" );
  */
 
 // -----------------------------------------------------------------------------
-
 
 /**
  * INSPIRATION & RESOURCES
