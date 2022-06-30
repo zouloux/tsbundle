@@ -122,7 +122,7 @@ CLICommands.add("build", async () => {
 				process.exit( 2 )
 			}
 			// Success, show report
-			taskUpdater.success(`Built ${key}`)
+			taskUpdater.success(`Built ${packageConfig.libraryName}`)
 			if (!reports) return;
 			newLine()
 			reports = [

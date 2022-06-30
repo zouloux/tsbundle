@@ -36,7 +36,7 @@ const superLightAMDModuleSystem = `
 			var moduleFactory = _registry[ modulePath ]
 			if ( typeof moduleFactory === "function" ) {
 				var exports = {}
-				moduleFactory( module, exports );
+				moduleFactory( exports );
 				_registry[ modulePath ] = exports
 			}
 			return def( _registry[ modulePath ] );
@@ -71,7 +71,7 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 				)
 				return [
 					// Module define header
-					`_.define("./${relativeFilePath}", (module, exports) => {`,
+					`_.define("./${relativeFilePath}", function (exports) {`,
 					// Module content
 					c,
 					// Module close
