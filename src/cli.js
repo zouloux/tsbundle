@@ -118,6 +118,8 @@ CLICommands.add("build", async () => {
 				taskUpdater.error( e.message )
 				newLine();
 				console.error( e )
+				if ( e.cause )
+					console.error( e.cause )
 				process.exit( 2 )
 				//nicePrint(`{b/r}${e.message}`, { code: 2 })
 			}
