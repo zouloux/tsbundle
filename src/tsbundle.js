@@ -288,8 +288,8 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				const svgBitFile = new File( bitPath );
 				const sizeContent = naiveHumanFileSize( fileSizes[1] )
 				svgBitFile.content( () => [
-					`<svg width="${sizeContent.length * 10}" height="20" xmlns="http://www.w3.org/2000/svg">`,
-					`<text y="16" font-size="16px" font-family="monospace">${sizeContent}</text>`,
+					`<svg width="${sizeContent.length * 10}" height="22" xmlns="http://www.w3.org/2000/svg">`,
+					`<text y="21" font-size="16px" font-family="monospace" fill="green">${sizeContent}</text>`,
 					`</svg>`,
 				].join(""))
 				await svgBitFile.ensureParents()

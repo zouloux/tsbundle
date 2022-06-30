@@ -8,7 +8,8 @@
 		{
 			"input" : "./src/index.ts",
 			"output" : "./dist",
-			"formats" : ["defaults", "es5.min.js"]
+			"formats" : ["defaults", "es5.min.js"],
+			"exportBits" : true
 		}
 	]
 }
