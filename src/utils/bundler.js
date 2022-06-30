@@ -80,11 +80,10 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	const entryPoint = path.basename(mainInputPath)
 	if ( isMultiFiles )
 		bundleStreamLines.push(`var exports = require("./${entryPoint}")`)
+	// Declare library name in global scope
 	const inlinedDefaultExports = `exports.default ? exports.default : exports`
-	if ( shortPackageName && shortPackageName !== packageName )
-		bundleStreamLines.push(`_["${shortPackageName}"] = _["${packageName}"] = ${inlinedDefaultExports}`)
-	else
-		bundleStreamLines.push(`_["${packageName}"] = ${inlinedDefaultExports}`)
+	let key = shortPackageName ? shortPackageName : packageName
+	bundleStreamLines.push(`_["${key}"] = ${inlinedDefaultExports}`)
 	bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : this)`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
