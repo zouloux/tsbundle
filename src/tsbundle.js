@@ -282,6 +282,19 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			report.push(
 				`${generatedFiles.length} file${generatedFiles.length > 1 ? 's' : ''} ${bundleAndMinifyOutput ? 'bundle' : 'flat'}`
 			)
+			// Export bit svg file for this format
+			if ( fileConfig.exportBits ) {
+				const bitPath = path.join( packageConfig.packageRoot, 'bits', `${path.basename(mainInputPath)}.${format}.svg` )
+				const svgBitFile = new File( bitPath );
+				const sizeContent = naiveHumanFileSize( fileSizes[1] )
+				svgBitFile.content( () => [
+					`<svg width="${sizeContent.length * 10}" height="20" xmlns="http://www.w3.org/2000/svg">`,
+					`<text y="16" font-size="16px" font-family="monospace">${sizeContent}</text>`,
+					`</svg>`,
+				].join(""))
+				await svgBitFile.ensureParents()
+				await svgBitFile.save();
+			}
 			// Add sizes
 			reports.push([
 				...report,

@@ -42,7 +42,9 @@ exports.tsBundleDefaultConfig = {
 		"es2022.mjs",
 	],
 	// When testing lib, only one format is created
-	testFormat: "es2020.mjs"
+	testFormat: "es2020.mjs",
+	// Do not export bits by default
+	exportBits: false
 }
 
 /**

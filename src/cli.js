@@ -104,7 +104,7 @@ CLICommands.add("build", async () => {
 	// Browse all packages from cli arguments
 	await browsePackages( packages, async (key, packageConfig) => {
 		// Create a cli task for each package
-		await oraTask({ text: `Building ${key}` }, async taskUpdater => {
+		await oraTask({ text: `Building ${packageConfig.libraryName}` }, async taskUpdater => {
 			// Build this package, get reports and catch errors
 			let reports = []
 			try {
@@ -118,10 +118,8 @@ CLICommands.add("build", async () => {
 				taskUpdater.error( e.message )
 				newLine();
 				console.error( e )
-				if ( e.cause )
-					console.error( e.cause )
+				e.cause && console.error( e.cause )
 				process.exit( 2 )
-				//nicePrint(`{b/r}${e.message}`, { code: 2 })
 			}
 			// Success, show report
 			taskUpdater.success(`Built ${key}`)
