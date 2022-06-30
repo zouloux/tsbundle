@@ -29,6 +29,8 @@ exports.defaultTerserOptions = [
 exports.tsBundleDefaultConfig = {
 	// Default relative output path from package.json
 	output: "./dist/",
+	// Generate .d.ts type definitions for this entry point
+	generateTypeDefinitions: true,
 	// Default formats, if none specified or if "defaults" is used.
 	formats : [
 		// Will default export a UMD bundled file (single output file) for browsers
@@ -39,10 +41,8 @@ exports.tsBundleDefaultConfig = {
 		// Modern output, non bundled, as modern modules
 		"es2022.mjs",
 	],
-	// Generate .d.ts type definitions for this entry point
-	generateTypeDefinitions: true,
-	// Generate size reports (min+gzip) also for non minified outputs
-	reportSize: true,
+	// When testing lib, only one format is created
+	testFormat: "es2020.mjs"
 }
 
 /**

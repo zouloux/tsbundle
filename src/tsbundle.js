@@ -1,10 +1,12 @@
 const path = require( "path" );
 const { Directory, File, FileFinder } = require( "@solid-js/files" );
-const { execSync, execAsync } = require( "@solid-js/cli" );
+const { execAsync } = require( "@solid-js/cli" );
 const { replaceImportsRegex, defaultTerserOptions } = require( "./utils/defaults" );
 const fs = require("fs")
-const { filterDuplicates } = require( "./utils/common" );
+const { filterDuplicates, naiveHumanFileSize } = require( "./utils/common" );
 const { bundleFiles } = require( "./utils/bundler" );
+const zlib = require( "zlib" );
+const chalk = require( "chalk" );
 
 
 /**
@@ -21,6 +23,15 @@ function targetBuilderPath ( ...parts ) {
  * Target a bin
  */
 const targetBin = (bin) => targetBuilderPath( 'node_modules', '.bin', bin )
+
+/**
+ * Weight a file and return original + gzipped size
+ */
+async function gzipSize ( filePath ) {
+	const content = await fs.promises.readFile( filePath )
+	return [ content.length, zlib.gzipSync( content ).length ];
+}
+
 
 /**
  * Ensure, create and clean temp directory.
@@ -108,18 +119,23 @@ exports.patchPathsAndRenameExportedFiles = async function ( rootDir, extension )
 		)
 		await file.save();
 	}
-	return [ javascriptFiles, renamedJavascriptFiles ]
+	return {
+		input: javascriptFiles,
+		output: renamedJavascriptFiles,
+	}
 }
 
 exports.buildPackage = async function ( packageConfig, progressHandler ) {
+	// Prepare
 	if ( !progressHandler ) progressHandler = () => {}
-	// Prepare tmp
 	let currentStep = 0
 	progressHandler("Cleaning", currentStep)
 	await exports.cleanOutputs( packageConfig )
 	const outputPath = targetBuilderPath('tmp')
+	const reports = []
 	// Browse files to compile
 	for ( const fileConfig of packageConfig.files ) {
+		// Browse formats for this file
 		let isFirstFormat = true
 		for ( const format of fileConfig.formats ) {
 			// Reset temp directory and prepare tsconfig for this file
@@ -186,12 +202,15 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			}
 			await deleteTsConfig();
 			const distOutput = path.join( packageConfig.packageRoot, fileConfig.output );
+			const mainInputPath = path.join( outputPath, entryPointName )
+			let minifiedFilePath
+			let fileSizes = [ 0, 0 ]
 			// If we need to bundle and minify output
+			let generatedFiles = []
 			if ( bundleAndMinifyOutput ) {
-				const minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
-				const mainInputPath = path.join( outputPath, entryPointName )
-				progressHandler(`Bundling ${path.basename(minifiedFilePath)}`, ++currentStep)
-				const [ inputFiles, generatedFiles ] = await exports.patchPathsAndRenameExportedFiles( outputPath, '' );
+				minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
+				progressHandler(`Bundling ${path.basename(minifiedFilePath)}`, ++currentStep);
+				generatedFiles = (await exports.patchPathsAndRenameExportedFiles( outputPath, '' )).output;
 				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName )
 				// Compress and minify output
 				progressHandler(`Compressing ${path.basename(minifiedFilePath)}`, ++currentStep)
@@ -209,6 +228,8 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				catch ( e ) {
 					throw new Error(`Terser error detected`, { cause: e })
 				}
+				// Weight bundled output before moving it
+				fileSizes = await gzipSize( minifiedFilePath )
 				// Export to output path
 				// Move minified
 				progressHandler(`Exporting ${path.basename(minifiedFilePath)} to ${ fileConfig.output }`, ++currentStep)
@@ -222,16 +243,43 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				currentStep += 2
 				progressHandler(`Exporting ${path.basename(fileConfig.input)} to ${ fileConfig.output }`, ++currentStep)
 				// Patch extensions of files and patch extensions in require / imports
-				await exports.patchPathsAndRenameExportedFiles( outputPath, moduleExtension );
+				generatedFiles = (await exports.patchPathsAndRenameExportedFiles( outputPath, moduleExtension )).output
+				// Weight generated files before moving them
+				for ( const file of generatedFiles ) {
+					const size = await gzipSize( file )
+					fileSizes[0] += size[0]
+					fileSizes[1] += size[1]
+				}
 				// Move all files to dist output
 				const directory = new Directory( outputPath )
 				const children = await directory.children('all')
 				for ( const fileEntity of children )
 					await fileEntity.copyTo( distOutput + '/' )
 			}
+			// Always reset tmp directory before and after build, to keep things tidy
 			await exports.resetTmpDirectory();
-			// TODO : Stats
-			// TODO : + Gzip stat for all files
+			// Generate report for this format
+			const report = [
+				// Input
+				path.relative( packageConfig.packageRoot, fileConfig.input ),
+				// Module & target
+				module, target,
+				// Output
+				path.join( fileConfig.output, path.relative( outputPath, `${mainInputPath}.${format}`) ),
+			]
+			// Additional bundled files
+			report.push(
+				`${generatedFiles.length} file${generatedFiles.length > 1 ? 's' : ''} ${bundleAndMinifyOutput ? 'bundle' : 'flat'}`
+			)
+			// Add sizes
+			reports.push([
+				...report,
+				...fileSizes
+					.map( naiveHumanFileSize )
+					.map( (s, i) => bundleAndMinifyOutput || !i ? s : `~${s}` )
+					.map( (s, i) => i === 0 ? chalk.cyan( s ) : chalk.cyan.bold( s ) )
+			])
 		}
 	}
+	return reports
 }

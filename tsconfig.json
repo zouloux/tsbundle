@@ -7,6 +7,7 @@
 		// https://www.npmjs.com/package/@tsconfig/node12
 //		"lib": ["DOM", "esNext", "es2019", "es2020.promise", "es2020.bigint", "es2020.string"],
 		//"module": "ES2022",
+		"moduleResolution": "node",
 
 		// Typings roots. Use node_modules types
 		// and also types folder to be able to create new types
@@ -21,12 +22,14 @@
 		"removeComments": false,
 		"preserveConstEnums": true,
 
+		// Do not include "use strict"
+		"noImplicitUseStrict": true,
+
 		// ------------------------------------------------------------------------- ERRORS
 
 		// Report error on unused locals and parameters
 		//"noUnusedLocals": true,
 		//"noUnusedParameters": true,
-
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 
@@ -46,8 +49,9 @@
 		"forceConsistentCasingInFileNames" : true,
 
 		// Allow import as default without default export declared
-		"allowSyntheticDefaultImports" : true,
-		"esModuleInterop" : true,
+		//"allowSyntheticDefaultImports" : true,
+		//"esModuleInterop" : true,
+		"esModuleInterop": false,
 
 		// ------------------------------------------------------------------------- LOGGING
 

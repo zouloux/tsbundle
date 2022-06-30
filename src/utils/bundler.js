@@ -10,6 +10,8 @@ const path = require("path")
  * 		(like if we have a dep to Signal for ex)
  * TODO :
  * - Better AMD implementation, which works with several bundles and dependencies ?
+ * TODO :
+ * - Allow node_modules inclusion like @zouloux/ecma-core
  */
 
 /**
@@ -75,9 +77,10 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	const entryPoint = path.basename(mainInputPath)
 	bundleStreamLines.push(
 		isMultiFiles
-		? `this["${packageName}"] = require("./${entryPoint}")`
-		: `this["${packageName}"] = exports`
+		? `var main = require("./${entryPoint}")`
+		: `var main = exports`
 	)
+	bundleStreamLines.push(`this["${packageName}"] = main.default ? main.default : main`)
 	bundleStreamLines.push(`}()`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
