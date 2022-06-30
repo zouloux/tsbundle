@@ -99,6 +99,7 @@ exports.readConfigFromProjectPath = function ( projectPath ) {
     normalizedOutputs = normalizedOutputs.filter( exports.filterDuplicates )
     // Return normalized config
     return {
+        libraryName: packageData.name,
         packageRoot, total, normalizedOutputs,
         files: normalizedFileConfigs,
     }

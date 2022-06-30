@@ -1,3 +1,6 @@
+.DS_Store
+.idea
 src/_
 tmp/
 .gitignore
+tests/

@@ -29,10 +29,10 @@ const path = require("path")
  * TODO : Add fallback to native require if module is not found
  */
 const superLightAMDModuleSystem = `
-	if ( typeof this.define === "undefined" ) {
+	if ( typeof _.define === "undefined" ) {
 		var _registry = {}
-		this.define = function ( modulePath, factory ) { _registry[ modulePath ] = factory }
-		this.require = function ( modulePath ) {
+		_.define = function ( modulePath, factory ) { _registry[ modulePath ] = factory }
+		_.require = function ( modulePath ) {
 			var moduleFactory = _registry[ modulePath ]
 			if ( typeof moduleFactory === "function" ) {
 				var exports = {}
@@ -42,12 +42,12 @@ const superLightAMDModuleSystem = `
 			return _registry[ modulePath ];
 		}
 	}
-	require = this.require
+	require = _.require
 `
 
-exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, packageName ) {
+exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, packageName, shortPackageName ) {
 	// Create IIFE wrapper
-	const bundleStreamLines = ["!function () {"]
+	let bundleStreamLines = ["!function (_) {"]
 	// Inject super light implementation of AMD if we have several files to bundle only
 	const isMultiFiles = allInputPaths.length > 1
 	if ( isMultiFiles )
@@ -66,8 +66,11 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 					filePath
 				)
 				return [
-					`this.define("./${relativeFilePath}", (module, exports) => {`,
+					// Module define header
+					`_.define("./${relativeFilePath}", (module, exports) => {`,
+					// Module content
 					c,
+					// Module close
 					`});`,
 				].join("\n")
 			})
@@ -75,18 +78,23 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	}
 	// Call entry point and end IIFE wrapper
 	const entryPoint = path.basename(mainInputPath)
-	bundleStreamLines.push(
-		isMultiFiles
-		? `var main = require("./${entryPoint}")`
-		: `var main = exports`
-	)
-	bundleStreamLines.push(`this["${packageName}"] = main.default ? main.default : main`)
-	bundleStreamLines.push(`}()`)
+	if ( isMultiFiles )
+		bundleStreamLines.push(`var exports = require("./${entryPoint}")`)
+	const inlinedDefaultExports = `exports.default ? exports.default : exports`
+	if ( shortPackageName && shortPackageName !== packageName )
+		bundleStreamLines.push(`_["${shortPackageName}"] = _["${packageName}"] = ${inlinedDefaultExports}`)
+	else
+		bundleStreamLines.push(`_["${packageName}"] = ${inlinedDefaultExports}`)
+	bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : this)`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
 	if ( isMultiFiles ) {
 		// TODO : Replace all identifiers by indexes, will patch ../ targets
 	}
+	// Filter out useless stuff
+	bundleStreamLines = bundleStreamLines.join("\n").split("\n").flat()
+		.filter( line => !line.startsWith(`Object.defineProperty(exports, "__esModule", { value: true })`) )
+	// Filter out useless liens
 	outputFile.content( bundleStreamLines.join("\n") )
 	await outputFile.save();
 }
