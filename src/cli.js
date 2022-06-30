@@ -22,6 +22,7 @@ const { buildPackage } = require( "./tsbundle" );
  */
 /**
  * TODO 1.4.0 - Release and doc
+ *  - npm ignore
  * 	- tsbundle test
  * 	- tsbundle clean
  * 	- tsbundle publish
@@ -102,8 +103,9 @@ CLICommands.before((cliOptions, cliArguments) => {
 CLICommands.add("build", async () => {
 	// Browse all packages from cli arguments
 	await browsePackages( packages, async (key, packageConfig) => {
-		// console.log( packageConfig.files );
+		// Create a cli task for each package
 		await oraTask({ text: `Building ${key}` }, async taskUpdater => {
+			// Build this package, get reports and catch errors
 			let reports = []
 			try {
 				reports = await buildPackage( packageConfig, (text, index) => {
@@ -111,12 +113,16 @@ CLICommands.add("build", async () => {
 					taskUpdater.setProgress( index, packageConfig.total * 5 + 1 )
 				})
 			}
+			// An error happened, stop task and halt process
 			catch ( e ) {
+				taskUpdater.error( e.message )
+				newLine();
 				console.error( e )
-				nicePrint(`{b/r}${e.message}`, { code: 2 })
+				process.exit( 2 )
+				//nicePrint(`{b/r}${e.message}`, { code: 2 })
 			}
+			// Success, show report
 			taskUpdater.success(`Built ${key}`)
-			// Show report
 			if (!reports) return;
 			newLine()
 			reports = [

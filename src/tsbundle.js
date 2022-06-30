@@ -22,7 +22,16 @@ function targetBuilderPath ( ...parts ) {
 /**
  * Target a bin
  */
-const targetBin = (bin) => targetBuilderPath( 'node_modules', '.bin', bin )
+const targetBin = (packageRoot, bin) => {
+	const binFromPackageRoot = path.join(packageRoot, 'node_modules', '.bin', bin)
+	return (
+		// From package node_modules if it exists
+		fs.existsSync( binFromPackageRoot )
+		? binFromPackageRoot
+		// Otherwise, from tsbundle package node_modules
+		: targetBuilderPath( 'node_modules', '.bin', bin )
+	)
+}
 
 /**
  * Weight a file and return original + gzipped size
@@ -181,7 +190,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			// Split format to get composite info
 			// Create tsc compile command
 			const tscCommand = [
-				targetBin('tsc'),
+				targetBin(packageConfig.packageRoot, 'tsc'),
 				`-p ${tsConfigPath}`,
 				// Export declaration only at first pass.
 				`--declaration ${isFirstFormat && fileConfig.generateTypeDefinitions ? 'true' : 'false'}`,
@@ -215,7 +224,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				// Compress and minify output
 				progressHandler(`Compressing ${path.basename(minifiedFilePath)}`, ++currentStep)
 				const terserCommand = [
-					targetBin('terser'),
+					targetBin(packageConfig.packageRoot, 'terser'),
 					...defaultTerserOptions,
 					// Override bundled file
 					`-o ${ minifiedFilePath }`,
