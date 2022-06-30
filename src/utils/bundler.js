@@ -39,7 +39,7 @@ const superLightAMDModuleSystem = `
 				moduleFactory( exports );
 				_registry[ modulePath ] = exports
 			}
-			return def( _registry[ modulePath ] );
+			return _registry[ modulePath ];
 		}
 	}
 	require = _.require
@@ -50,7 +50,7 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 		// Create IIFE wrapper
 		"!function (_) {",
 		// Include default export target helper
-		`function def (a) { return a.default ? a.default : a }`
+		`function def (a) { return a ? (a.default ? a.default : a) : null }`
 	]
 	// Inject super light implementation of AMD if we have several files to bundle only
 	const isMultiFiles = allInputPaths.length > 1
@@ -87,9 +87,14 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	}
 	// Expose public exported members
 	if ( typeof exportMap === "object" && isMultiFiles ) {
-		Object.keys( exportMap ).map( key => {
-			bundleStreamLines.push(`_["${key}"] = require("${ exportMap[key] }")`)
-		})
+		bundleStreamLines.push(`var lib = {}`)
+		bundleStreamLines.push(`var exportMap = ${JSON.stringify(exportMap)}`)
+		bundleStreamLines.push(`for (var i in exportMap) {`)
+		bundleStreamLines.push(`	var module = require(exportMap[i])`)
+		bundleStreamLines.push(`	Object.assign( lib, module )`)
+		bundleStreamLines.push(`	_[i] = def( module )`)
+		bundleStreamLines.push(`}`)
+		bundleStreamLines.push(`_["${libraryName}"] = lib`)
 	}
 	else {
 		bundleStreamLines.push(`_["${libraryName}"] = def(exports)`)
