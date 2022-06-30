@@ -104,6 +104,7 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	// Filter out useless stuff
 	bundleStreamLines = bundleStreamLines.join("\n").split("\n").flat()
 		.filter( line => !line.startsWith(`Object.defineProperty(exports, "__esModule", { value: true })`) )
+		.filter( line => !line.match(/exports\.(.*)\s?=\s?void\s0;/) )
 	// Filter out useless liens
 	outputFile.content( bundleStreamLines.join("\n") )
 	await outputFile.save();
