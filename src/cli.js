@@ -5,6 +5,7 @@ const path = require("path")
 const chalk = require("chalk")
 const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );
 const { buildPackage } = require( "./tsbundle" );
+const { testLibrary } = require( "./utils/test" );
 
 // -----------------------------------------------------------------------------
 
@@ -143,30 +144,33 @@ CLICommands.add("build", async (cliArguments, cliOptions) => {
 	})
 })
 
-// TODO : Implement test library
-async function testLibrary ( packageConfig ) {
-	// TODO : Skip if no test script
-	// FIXME : Does ora works ?
-	try {
-		// await execAsync(`npm run test`, 3, {
-		// 	cwd: packageConfig.packageRoot
-		// })
-	}
-	catch (e) {
-		process.exit();
-	}
+async function cliTestLibrary ( packageConfig ) {
+	// TODO : Build only needed output
+	await oraTask({ text: `Testing library` }, async task => {
+		try {
+			await testLibrary(packageConfig);
+			task.success(`Test succeeded`)
+		}
+		catch (e) {
+			task.error(`Test failed`)
+			newLine();
+			console.error( e )
+			process.exit( 3 );
+		}
+	})
 }
 
 CLICommands.add("test", async () => {
-	// TODO : Build only needed output and execute `npm run test` for specific package
-	await testLibrary();
+	await browsePackages( packages, async (key, packageConfig) => {
+		await cliTestLibrary( packageConfig )
+	});
 })
 CLICommands.add("clean", () => {
 	// TODO : Extract clean function and execute it only here
 })
 CLICommands.add("publish", async (cliArguments, cliOptions) => {
 	// Check NPM connected user
-	await oraTask({text: `Connected user`}, async task => {
+	await oraTask({text: `Connecting to npm`}, async task => {
 		try {
 			const whoami = await execAsync(`npm whoami`, 0)
 			task.success(nicePrint(`Hello {b/c}${whoami}`, {output: 'return'}).trim())
@@ -176,6 +180,8 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 			task.error(`Please connect to npm with ${chalk.bold('npm login')}`)
 		}
 	})
+	// TODO : When test will build only needed files, move build after tests
+	//  (to build all files after test has succeed)
 	// Compile
 	await CLICommands.run(`build`, cliArguments, cliOptions)
 	// Browse libraries
@@ -185,10 +191,9 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 		const libraryExecOptions = { cwd: packageRoot };
 		const stdioLevel = 3;
 		// Test this library, and exit if it fails
-		await testLibrary( packageConfig );
+		await cliTestLibrary( packageConfig )
 		// Test passed, show current version and git status
-		nicePrint(`Current version of {b/c}${libraryName}{/} is {b/c}${version}`)
-		newLine();
+		nicePrint(`📦 Current version of {b/c}${libraryName}{/} is {b/c}${version}`)
 		// Ask how to increment version
 		const increment = await askList(`How to increment ?`, {
 			patch: 'patch (0.0.X) - No new features, patch bugs or optimize code',

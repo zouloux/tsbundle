@@ -101,6 +101,7 @@ exports.readConfigFromProjectPath = function ( projectPath ) {
     return {
         libraryName: packageData.name,
         version: packageData.version,
+        scripts: 'scripts' in packageData ? packageData.scripts : {},
         packageRoot, total, normalizedOutputs,
         files: normalizedFileConfigs,
     }
