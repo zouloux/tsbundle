@@ -2,24 +2,37 @@
 /**
  * Default terser options to minify and bundle outputs
  * @see https://github.com/terser/terser
+ * TODO : Function with ecma as parameter ? terser input.js --compress ecma=2015,computed_props=false
  */
+
+const keepClassNames = false;
+const keepFunctionNames = false;
+
 exports.defaultTerserOptions = [
 	// Compress and shorten names
-	'--compress',
-	// '--no-compress',
-	'--mangle',
-	// '--no-mangle',
-	// '--beautify',
+	'--compress', [
+		`ecma=2017`,
+		'passes=3',
+		`keep_classnames=${keepClassNames}`,
+		`keep_fnames=${keepFunctionNames}`,
+		'dead_code=true',
+		'unsafe_arrows=true',
+		'unsafe_methods=true',
+		'unsafe_undefined=true',
+		'keep_fargs=false',
+	].join(","),
+	// Mangle variables and functions
+	'--mangle', [
+		'toplevel=true',
+		`keep_classnames=${keepClassNames}`,
+		`keep_fnames=${keepFunctionNames}`
+	].join(","),
+	// Mangle properties starting with an underscore
+	`--mangle-props`, [`regex=/^_/`].join(','),
 	// Set env as production for dead code elimination
-	'-d process.env.NODE_ENV=\"PRODUCTION\"',
-	// Keep class names and function names
-	'--keep_classnames',
-	'--keep_fnames',
-	// Allow top level mangling
-	// '--toplevel',
-	// '--no-toplevel',
+	`-d 'process.env.NODE_ENV="production"'`,
 	// Threat as module (remove "use strict")
-	// '--module'
+	'--module'
 ];
 
 /**

@@ -232,6 +232,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 					`-o ${ minifiedFilePath }`,
 					`-- ${ minifiedFilePath }`
 				].join(" ")
+				// console.log( terserCommand );process.exit();
 				// Execute terser command
 				try {
 					await execAsync( terserCommand, 3 );
@@ -280,7 +281,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			]
 			// Additional bundled files
 			report.push(
-				`${generatedFiles.length} file${generatedFiles.length > 1 ? 's' : ''} ${bundleAndMinifyOutput ? 'bundle' : 'flat'}`
+				`${generatedFiles.length} file${generatedFiles.length > 1 ? 's' : ''} ${bundleAndMinifyOutput ? chalk.magenta('bundle') : chalk.green('flat')}`
 			)
 			// Export bit svg file for this format
 			if ( fileConfig.exportBits ) {
@@ -300,7 +301,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				...report,
 				...fileSizes
 					.map( naiveHumanFileSize )
-					.map( (s, i) => bundleAndMinifyOutput || !i ? s : `~${s}` )
+					.map( (s, i) => bundleAndMinifyOutput || !i ? s : `-` )
 					.map( (s, i) => i === 0 ? chalk.cyan( s ) : chalk.cyan.bold( s ) )
 			])
 		}

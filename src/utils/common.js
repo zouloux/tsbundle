@@ -100,6 +100,7 @@ exports.readConfigFromProjectPath = function ( projectPath ) {
     // Return normalized config
     return {
         libraryName: packageData.name,
+        version: packageData.version,
         packageRoot, total, normalizedOutputs,
         files: normalizedFileConfigs,
     }

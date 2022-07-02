@@ -7,7 +7,8 @@
     "tsbundle": "src/cli.js"
   },
   "scripts": {
-    "test": "node src/cli.js build ./tests/single/ ./tests/multi/"
+    "test": "node src/cli.js build ./tests/single/ ./tests/multi/",
+    "publish" : "tsbundle publish"
   },
   "dependencies": {
     "@solid-js/cli": "^1.7.5",
@@ -21,6 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/zouloux/tsbundle.git"
   },
+  "tsbundle" : [],
   "keywords": [
     "library",
     "bundle",

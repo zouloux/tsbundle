@@ -28,34 +28,60 @@ const path = require("path")
  * ES5 compatible, absolutely no error checking.
  * TODO : Add fallback to native require if module is not found
  */
-const superLightAMDModuleSystem = `
-	if ( typeof _.define === "undefined" ) {
-		var _registry = {}
-		_.define = function ( modulePath, factory ) { _registry[ modulePath ] = factory }
-		_.require = function ( modulePath ) {
-			var moduleFactory = _registry[ modulePath ]
-			if ( typeof moduleFactory === "function" ) {
-				var exports = {}
-				moduleFactory( exports );
-				_registry[ modulePath ] = exports
-			}
-			return _registry[ modulePath ];
+// const superLightAMDModuleSystem = `
+// 	if ( !scope.define ) {
+// 		var __amdRegistry = {}
+// 		scope.define = function ( modulePath, factory ) { __amdRegistry[ modulePath ] = factory }
+// 		scope.require = function ( modulePath ) {
+// 			var moduleFactory = __amdRegistry[ modulePath ]
+// 			if ( typeof moduleFactory === "function" ) {
+// 				var exports = {}
+// 				moduleFactory( exports );
+// 				__amdRegistry[ modulePath ] = exports
+// 			}
+// 			return __amdRegistry[ modulePath ];
+// 		}
+// 	}
+// 	var require = scope.require
+// `
+
+const superLightModuleSystem = `
+	var modulesRegistry = {}
+	var previousRequire = scope.require
+	function define ( modulePath, factory ) { modulesRegistry[ modulePath ] = factory }
+	function require ( modulePath ) {
+		var module = modulesRegistry[modulePath]
+		if ( typeof module === "function" ) {
+			var exports = {}
+			module( exports )
+			module = modulesRegistry[ modulePath ] = exports
 		}
+		if ( module )
+			return module
+		if ( previousRequire )
+			return previousRequire( modulePath )
+		throw {}
 	}
-	require = _.require
+	if ( !scope.define ) {
+		scope.define = define
+		scope.require = require
+	}
 `
 
 exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, libraryName, exportMap ) {
+
+	const cjsCompatible = false;
+
 	let bundleStreamLines = [
 		// Create IIFE wrapper
-		"!function (_) {",
+		"!function ( scope, hostModule ) {",
 		// Include default export target helper
 		`function def (a) { return a ? (a.default ? a.default : a) : null }`
 	]
-	// Inject super light implementation of AMD if we have several files to bundle only
+	// Inject super light implementation of AMD-like if we have several files to bundle only
 	const isMultiFiles = allInputPaths.length > 1
 	if ( isMultiFiles )
-		bundleStreamLines.push( superLightAMDModuleSystem )
+		bundleStreamLines.push( superLightModuleSystem )
 	// Browse all files
 	for ( const filePath of allInputPaths ) {
 		// Load file content
@@ -71,7 +97,7 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 				)
 				return [
 					// Module define header
-					`_.define("./${relativeFilePath}", function (exports) {`,
+					`define("./${relativeFilePath}", function (exports) {`,
 					// Module content
 					c,
 					// Module close
@@ -88,19 +114,25 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	// Expose public exported members
 	if ( typeof exportMap === "object" && isMultiFiles ) {
 		bundleStreamLines.push(`var lib = {}`)
-		bundleStreamLines.push(`var exportMap = ${JSON.stringify(exportMap)}`)
+		bundleStreamLines.push(`var exportMap = ${JSON.stringify(exportMap)}`) // TODO : Filter export map with existing file in allInputPaths
 		bundleStreamLines.push(`for (var i in exportMap) {`)
 		bundleStreamLines.push(`	var module = require(exportMap[i])`)
 		bundleStreamLines.push(`	Object.assign( lib, module )`)
-		bundleStreamLines.push(`	_[i] = def( module )`)
+		bundleStreamLines.push(`	scope[i] = def( module )`)
 		bundleStreamLines.push(`}`)
-		bundleStreamLines.push(`_["${libraryName}"] = lib`)
+		// For browser, define main package as lib
+		bundleStreamLines.push(`define("${libraryName}", lib)`)
+		// For node CommonJS, use module.exports as lib
+		if ( cjsCompatible )
+			bundleStreamLines.push(`if (hostModule && hostModule.exports) hostModule.exports = lib`)
 	}
 	else {
-		bundleStreamLines.push(`_["${libraryName}"] = def(exports)`)
+		bundleStreamLines.push(`scope["${libraryName}"] = def(exports)`)
 	}
 	// Close IIFE
-	bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : this)`)
+	cjsCompatible
+	? bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : {}, typeof module !== 'undefined' ? module : null)`)
+	: bundleStreamLines.push(`}(typeof self !== 'undefined' ? self : {})`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
 	if ( isMultiFiles ) {
