@@ -208,7 +208,7 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 		message = message.replace(/["']/g, "'");
 		// If we increment, use npm version
 		if ( increment !== 'keep' ) {
-			version = execSync(`npm version ${increment} -m"${libraryName} - %s - ${message}"`, stdioLevel, libraryExecOptions).toString();
+			version = execSync(`npm version ${increment} --no-git-tag-version -m"${libraryName} - %s - ${message}"`, stdioLevel, libraryExecOptions).toString().trim();
 		}
 		// Add to git and push
 		execSync(`git add .`, stdioLevel, libraryExecOptions);

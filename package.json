@@ -1,6 +1,6 @@
 {
   "name": "@zouloux/tsbundle",
-  "version": "1.2.9",
+  "version": "1.2.12",
   "description": "Compile your Typescript libraries to ESM, CommonJS and optimized browser package.",
   "main": "src/tsbundle.js",
   "bin": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node src/cli.js build ./tests/single/ ./tests/multi/",
-    "publish" : "tsbundle publish"
+    "publish": "tsbundle publish"
   },
   "dependencies": {
     "@solid-js/cli": "^1.7.5",
@@ -22,7 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/zouloux/tsbundle.git"
   },
-  "tsbundle" : [],
+  "tsbundle": [],
   "keywords": [
     "library",
     "bundle",
