@@ -32,7 +32,8 @@ exports.defaultTerserOptions = [
 	// Set env as production for dead code elimination
 	`-d 'process.env.NODE_ENV="production"'`,
 	// Threat as module (remove "use strict")
-	'--module'
+	'--module',
+	'--toplevel',
 ];
 
 /**

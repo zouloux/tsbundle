@@ -1,13 +1,14 @@
 {
   "name": "@zouloux/tsbundle",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "description": "Compile your Typescript libraries to ESM, CommonJS and optimized browser package.",
   "main": "src/tsbundle.js",
   "bin": {
     "tsbundle": "src/cli.js"
   },
   "scripts": {
-    "test": "node src/cli.js build ./tests/single/ ./tests/multi/",
+    "--test": "node src/cli.js build ./tests/single/ ./tests/multi/",
+    "test": "node src/cli.js build ./tests/single/",
     "publish": "tsbundle publish"
   },
   "dependencies": {

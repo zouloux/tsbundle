@@ -213,16 +213,33 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			}
 			await deleteTsConfig();
 			const distOutput = path.join( packageConfig.packageRoot, fileConfig.output );
-			const mainInputPath = path.join( outputPath, entryPointName )
 			let minifiedFilePath
 			let fileSizes = [ 0, 0 ]
 			// If we need to bundle and minify output
 			let generatedFiles = []
+			let outputFileName = entryPointName + '.' + format
 			if ( bundleAndMinifyOutput ) {
-				minifiedFilePath = path.join( outputPath, entryPointName + '.' + format )
+				if ( fileConfig.outName )
+					outputFileName = fileConfig.outName + '.' + format
+				minifiedFilePath = path.join( outputPath, outputFileName )
 				progressHandler(`Bundling ${path.basename(minifiedFilePath)}`, ++currentStep);
 				generatedFiles = (await exports.patchPathsAndRenameExportedFiles( outputPath, '' )).output;
-				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName, fileConfig.exportMap )
+				// Include generated files
+				if ( typeof fileConfig.include === "object" ) {
+					const normalizedIncludedFilePaths = Object.keys( fileConfig.include )
+						.map( key => {
+							const filePath = fileConfig.include[ key ]
+							const normalized = path.normalize( path.join( packageConfig.packageRoot, filePath))
+							fileConfig.include[ key ] = normalized
+							return normalized;
+						})
+					generatedFiles = [
+						...generatedFiles,
+						...normalizedIncludedFilePaths
+					]
+				}
+				const mainInputPath = path.join( outputPath, entryPointName )
+				await bundleFiles( generatedFiles, mainInputPath, minifiedFilePath, fileConfig.libraryName, fileConfig.exportMap, fileConfig.include )
 				// Compress and minify output
 				progressHandler(`Compressing ${path.basename(minifiedFilePath)}`, ++currentStep)
 				const terserCommand = [
@@ -245,6 +262,8 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				// Export to output path
 				// Move minified
 				progressHandler(`Exporting ${path.basename(minifiedFilePath)} to ${ fileConfig.output }`, ++currentStep)
+				const outputDirectory = new Directory( distOutput )
+				await outputDirectory.ensureParents()
 				await fs.promises.rename(
 					minifiedFilePath,
 					path.join( distOutput, path.basename(minifiedFilePath) )
@@ -277,7 +296,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				// Module & target
 				module, target,
 				// Output
-				path.join( fileConfig.output, path.relative( outputPath, `${mainInputPath}.${format}`) ),
+				path.join( fileConfig.output, outputFileName ),
 			]
 			// Additional bundled files
 			report.push(
@@ -285,7 +304,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			)
 			// Export bit svg file for this format
 			if ( fileConfig.exportBits ) {
-				const bitPath = path.join( packageConfig.packageRoot, 'bits', `${path.basename(mainInputPath)}.${format}.svg` )
+				const bitPath = path.join( packageConfig.packageRoot, 'bits', `${outputFileName}.svg` )
 				const svgBitFile = new File( bitPath );
 				const sizeContent = naiveHumanFileSize( fileSizes[1] )
 				svgBitFile.content( () => [

@@ -10,27 +10,31 @@ const { testLibrary } = require( "./utils/test" );
 // -----------------------------------------------------------------------------
 
 /**
+ * TODO - TESTS
+ *  - Do proper tests in tests/
+ *  - Test generated bundles and halt if anything wrong (like exec error)
+ *
  * TODO 1.2.0 - Features
  * 	- Allow bundle as <script module> with native export tag for modern browsers ?
  * 		- Why not use non bundled version directly ? With http2 push it should work well.
  * 	- Allow dependency inclusion from node_modules (like @zouloux/ecma-core for ex)
  * 		- Also better interop if several bundle are loaded, need tests !
  * 	- Ability to rename bundles ?
- */
-/**
+ *
  * TODO 1.3.0 - Config optioons
  * 	- tsconfig override
  * 	- terserrc override
- */
-/**
+ *
  * TODO 1.4.0 - Release and doc
  *  - npm ignore
- * 	- tsbundle test
  * 	- tsbundle clean
- * 	- tsbundle publish
  * 	- Move every solid lib to @zouloux/ and refacto with this tool
  * 	- Replace stats in README.md with nanostache
  * 	- RC DOC
+ *
+ * TODO - BITS
+ *  - Should be able to clean bits folder
+ *  - Should be able to set bits folder ("exportsBits" : "../bits")
  */
 
 // -----------------------------------------------------------------------------
@@ -131,7 +135,7 @@ CLICommands.add("build", async (cliArguments, cliOptions) => {
 				process.exit( 2 )
 			}
 			// Success, show report
-			task.success(`Built ${packageConfig.libraryName}`)
+			task.success( nicePrint(`Built {b/c}${packageConfig.libraryName}`, { output: 'return' }) )
 			if (!reports) return;
 			newLine()
 			reports = [
@@ -173,7 +177,7 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 	await oraTask({text: `Connecting to npm`}, async task => {
 		try {
 			const whoami = await execAsync(`npm whoami`, 0)
-			task.success(nicePrint(`Hello {b/c}${whoami}`, {output: 'return'}).trim())
+			task.success(nicePrint(`Hello {b/c}@${whoami}`, {output: 'return'}).trim())
 			return whoami
 		}
 		catch (e) {
@@ -223,7 +227,6 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 		// FIXME : Access public as an option for private repositories
 		// Ingore script to avoid infinite loop (if "package.json.scripts.publish" == "tsbundle publish")
 		execSync(`npm publish --access public --ignore-scripts`, stdioLevel, libraryExecOptions);
-		newLine();
 		nicePrint(`👌 {b/g}${libraryName}{/}{g} Published, new version is {b/g}${version}`)
 	})
 })

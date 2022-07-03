@@ -8,8 +8,16 @@
 		{
 			"input" : "./src/index.ts",
 			"output" : "./dist",
-			"formats" : ["defaults", "es5.min.js"],
-			"exportBits" : true
+			"formats" : ["es2017.min.js"],
+			"--formats" : ["defaults", "es5.min.js"],
+			"exportBits" : true,
+			"outName" : "single+signal",
+			"include" : {
+				"@zouloux/signal" : "./node_modules/@zouloux/signal/dist/signal.es2017.cjs"
+			}
 		}
-	]
+	],
+	"devDependencies": {
+		"@zouloux/signal" : "^0.2.3"
+	}
 }
