@@ -26,7 +26,9 @@ const path = require("path")
  * Super light AMD implementation which is missing a lot of stuff
  * but should work for tsc outputs.
  * ES5 compatible, absolutely no error checking.
- * TODO : Add fallback to native require if module is not found
+ * TODO : Add fallback to node native require if module is not found
+ * TODO : Test fallback to previous require if module is not found
+ * TODO : Define should not override modules if already defined, find something neat
  */
 const superLightModuleSystem = `
 	var modulesRegistry = {}
@@ -48,9 +50,9 @@ const superLightModuleSystem = `
 `
 
 exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath, libraryName, exportMap, includedLibraries ) {
-
+	// TODO : Add option into package config
 	const cjsCompatible = false;
-
+	// Prepare bundle lines
 	let bundleStreamLines = [
 		// Create IIFE wrapper
 		"!function ( scope, hostModule ) {",
@@ -75,15 +77,14 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 					includedLibraries
 					&& Object.values( includedLibraries ).indexOf( filePath ) !== -1
 				) {
-					defineKey = Object.keys( includedLibraries ).find( key => {
-						return filePath === includedLibraries[ key ]
-					})
+					defineKey = Object.keys( includedLibraries ).find(
+						key => filePath === includedLibraries[ key ]
+					)
 				}
 				// Target relative path for this bundle
 				else {
 					defineKey = './' + path.relative(
-						path.dirname( mainInputPath ),
-						filePath
+						path.dirname( mainInputPath ), filePath
 					)
 				}
 				return [
@@ -97,11 +98,10 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 			})
 		bundleStreamLines.push( file.content() )
 	}
-	// Call entry point and end IIFE wrapper
+	// Call entry point if we have multiple file
 	const entryPoint = path.basename(mainInputPath)
-	if ( isMultiFiles ) {
+	if ( isMultiFiles )
 		bundleStreamLines.push(`var exports = require("./${entryPoint}")`)
-	}
 	// Expose public exported members
 	if ( typeof exportMap === "object" && isMultiFiles ) {
 		bundleStreamLines.push(`var lib = {}`)
@@ -120,10 +120,11 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	else {
 		bundleStreamLines.push(`scope["${libraryName}"] = def(exports)`)
 	}
-	// Close IIFE
+	// Close IIFE, Node CJS + Browser compatible
 	cjsCompatible
 	? bundleStreamLines.push(`}(typeof self < 'u' ? self : {}, typeof module < 'u' ? module : null)`)
-	: bundleStreamLines.push(`}(typeof self < 'u' ? self : {})`)
+	// Only for browser (self is always defined and is equal to window)
+	: bundleStreamLines.push(`}(self)`)
 	// Concat everything into the file output
 	const outputFile = new File( outputPath )
 	if ( isMultiFiles ) {

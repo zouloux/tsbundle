@@ -5,6 +5,7 @@
  * TODO : Function with ecma as parameter ? terser input.js --compress ecma=2015,computed_props=false
  */
 
+// TODO : Add options into package config (and transform defaultTerserOptions to a function)
 const keepClassNames = false;
 const keepFunctionNames = false;
 

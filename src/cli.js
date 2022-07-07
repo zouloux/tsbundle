@@ -205,18 +205,20 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 			major: 'major (X.0.0) - Breaking change',
 			// Keep but publish on NPM (if already increment in package.json)
 			keep: `keep (${ version }) - Publish current package.json version`,
+			// Push on git but no lib publish
+			push: `push - Push on git only, no npm publish`,
 			// Skip this lib (no publish at all, go to next library)
-			skip: `skip - Do not publish ${ libraryName }`
+			skip: `skip - Do not publish ${ libraryName }`,
 		}, { returnType: 'key' });
 		// Go to next library
-		if ( increment === 'slip' )
+		if ( increment === 'skip' )
 			return
 		// execSync(`git status -s`, stdioLevel, libraryExecOptions)
 		// Ask for commit message
 		let message = await askInput(`Commit message ?`);
 		message = message.replace(/["']/g, "'");
 		// If we increment, use npm version
-		if ( increment !== 'keep' ) {
+		if ( increment !== 'keep' && increment !== 'push' ) {
 			version = execSync(`npm version ${increment} --no-git-tag-version -m"${libraryName} - %s - ${message}"`, stdioLevel, libraryExecOptions).toString().trim();
 		}
 		// Add to git and push
@@ -226,8 +228,13 @@ CLICommands.add("publish", async (cliArguments, cliOptions) => {
 		// Publish on npm as public
 		// FIXME : Access public as an option for private repositories
 		// Ingore script to avoid infinite loop (if "package.json.scripts.publish" == "tsbundle publish")
-		execSync(`npm publish --access public --ignore-scripts`, stdioLevel, libraryExecOptions);
-		nicePrint(`👌 {b/g}${libraryName}{/}{g} Published, new version is {b/g}${version}`)
+		if ( increment !== 'push' ) {
+			execSync(`npm publish --access public --ignore-scripts`, stdioLevel, libraryExecOptions);
+			nicePrint(`👌 {b/g}${libraryName}{/}{g} Published, new version is {b/g}${version}`)
+		}
+		else {
+			nicePrint(`👍 {b/g}${libraryName}{/}{g} Pushed to git`)
+		}
 	})
 })
 
