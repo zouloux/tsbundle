@@ -119,11 +119,19 @@ exports.patchPathsAndRenameExportedFiles = async function ( rootDir, extension )
 		file.content(
 			c => c.replaceAll(
 				replaceImportsRegex,
-				(...rest) => (
-					( baseNames.indexOf(rest[3]) === -1)
-					? rest[0]
-					: `${rest[1]} "${rest[2]}${rest[3]}${extension}"`
-				)
+				(...rest) => {
+					// console.log(rest)
+					return (
+						// If imported file exists in all renamed files
+						// Or, if we target a file which is compiled from another target
+						// we check if it starts with ./. Otherwise, it's a node_module
+						( baseNames.indexOf(rest[3]) === -1 && rest[2] !== "./")
+						// Keep original (certainly on node_module)
+						? rest[0]
+						// Target file with same extension and es-level
+						: `${rest[1]} "${rest[2]}${rest[3]}${extension}"`
+					)
+				}
 			)
 		)
 		await file.save();
