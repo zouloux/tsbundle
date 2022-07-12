@@ -48,13 +48,13 @@ exports.tsBundleDefaultConfig = {
 	generateTypeDefinitions: true,
 	// Default formats, if none specified or if "defaults" is used.
 	formats : [
-		// Will default export a UMD bundled file (single output file) for browsers
-		// with ES2017 compatibility level (not going down to ES5 by default)
-		"es2017.min.js",
 		// Node v12 compatible, non bundled as CommonJS
 		"es2019.cjs",
 		// Modern output, non bundled, as modern modules
 		"es2022.mjs",
+		// Will default export a UMD bundled file (single output file) for browsers
+		// with ES2017 compatibility level (not going down to ES5 by default)
+		"es2017.min.js",
 	],
 	// When testing lib, only one format is created
 	testFormat: "es2020.mjs",

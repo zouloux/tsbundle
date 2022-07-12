@@ -203,7 +203,7 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				targetBin(packageConfig.packageRoot, 'tsc'),
 				`-p ${tsConfigPath}`,
 				// Export declaration only at first pass.
-				`--declaration ${isFirstFormat && fileConfig.generateTypeDefinitions ? 'true' : 'false'}`,
+				`--declaration ${(isFirstFormat && fileConfig.generateTypeDefinitions) ? 'true' : 'false'}`,
 				`--module ${module}`,
 				`--target ${target}`,
 				// TODO : Load from tsconfig, should be overridable by project
