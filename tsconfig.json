@@ -52,6 +52,7 @@
 		// Allow import as default without default export declared
 		//"allowSyntheticDefaultImports" : true,
 		//"esModuleInterop" : true,
+		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": false,
 
 		// ------------------------------------------------------------------------- LOGGING
