@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { CLICommands, nicePrint, table, newLine, oraTask, execAsync, print, askList, askInput, execSync } = require("@solid-js/cli")
+const { CLICommands, nicePrint, table, newLine, oraTask, execAsync, print, askList, askInput, execSync } = require("@zouloux/cli")
 const path = require("path")
 const chalk = require("chalk")
 const { browsePackages, targetPackagesFromCli } = require( "./utils/cli-utils" );

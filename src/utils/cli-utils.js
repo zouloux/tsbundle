@@ -1,5 +1,5 @@
 const path = require( "path" );
-const { nicePrint } = require( "@solid-js/cli" );
+const { nicePrint } = require( "@zouloux/cli" );
 const { filterDuplicates, readConfigFromProjectPath } = require( "./common" );
 
 /**

@@ -1,4 +1,4 @@
-const { execAsync } = require( "@solid-js/cli" );
+const { execAsync } = require( "@zouloux/cli" );
 
 
 exports.testLibrary = async function ( packageConfig, buildMinimumOutput = true ) {

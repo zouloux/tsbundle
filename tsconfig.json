@@ -53,7 +53,7 @@
 		//"allowSyntheticDefaultImports" : true,
 		//"esModuleInterop" : true,
 		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": false,
+		"esModuleInterop": true,
 
 		// ------------------------------------------------------------------------- LOGGING
 

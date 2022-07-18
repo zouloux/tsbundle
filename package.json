@@ -1,6 +1,6 @@
 {
   "name": "@zouloux/tsbundle",
-  "version": "1.2.20",
+  "version": "1.2.21",
   "description": "Compile your Typescript libraries to ESM, CommonJS and optimized browser package.",
   "main": "src/tsbundle.js",
   "bin": {
@@ -12,10 +12,9 @@
     "publish": "tsbundle publish"
   },
   "dependencies": {
-    "@solid-js/cli": "^1.7.5",
-    "@solid-js/files": "^2.2.1",
+    "@zouloux/cli": "^0.1.7",
+    "@zouloux/files": "^3.0.0",
     "@types/node": "^18.0.0",
-    "chalk": "^4.1.2",
     "terser": "^5.14.1",
     "typescript": "^4.7.4"
   },

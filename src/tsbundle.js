@@ -1,6 +1,6 @@
 const path = require( "path" );
-const { Directory, File, FileFinder } = require( "@solid-js/files" );
-const { execAsync } = require( "@solid-js/cli" );
+const { Directory, File, FileFinder } = require( "@zouloux/files" );
+const { execAsync } = require( "@zouloux/cli" );
 const { replaceImportsRegex, defaultTerserOptions } = require( "./utils/defaults" );
 const fs = require("fs")
 const { filterDuplicates, naiveHumanFileSize } = require( "./utils/common" );
