@@ -150,6 +150,10 @@ exports.bundleFiles = async function ( allInputPaths, mainInputPath, outputPath,
 	}*/
 	// Concat lines
 	let buffer = bundleStreamLines.join("\n")
+	// ------------------------------------------------------------------------- OPTIMIZE - REPLACE DEFINE PROPERTY EXPORT
+	let regex;
+	regex = /Object\.defineProperty\(exports,\s+"(\w+)",\s+\{\s+enumerable:\s+true,\s+get:\s+function\s+\(\)\s+\{\s+return\s+([a-zA-Z0-9-_.]+);+\s+}\s+}\);/gmi;
+	buffer = buffer.replaceAll(regex, (...rest) => `exports.${rest[1]}=${rest[2]}` )
 	// ------------------------------------------------------------------------- REPLACE DEFINE / REQUIRE IDs
 	// Replace all local modules names to indexes
 	if ( useDefineInstructions ) {
