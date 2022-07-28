@@ -59,7 +59,9 @@ exports.tsBundleDefaultConfig = {
 	// When testing lib, only one format is created
 	testFormat: "es2020.mjs",
 	// Do not export bits by default
-	exportBits: false
+	exportBits: false,
+	// Filter generated ts files
+	filterGlob: null,
 }
 
 /**

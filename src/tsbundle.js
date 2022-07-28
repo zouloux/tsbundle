@@ -223,6 +223,24 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 			const distOutput = path.join( packageConfig.packageRoot, fileConfig.output );
 			let minifiedFilePath
 			let fileSizes = [ 0, 0 ]
+			// Filter output files with a glob filter
+			if ( fileConfig.filterGlob ) {
+				// Glob filter can be an array
+				const globs = Array.isArray( fileConfig.filterGlob ) ? fileConfig.filterGlob : [ fileConfig.filterGlob ]
+				// Get files to keep from glob array
+				let filesToKeep = []
+				for ( const glob of globs ) {
+					const absoluteGlob = path.join(outputPath, fileConfig.filterGlob)
+					const files = await FileFinder.find( "file", absoluteGlob )
+					filesToKeep = filesToKeep.concat( files )
+				}
+				// Now get all files in the output
+				const allFiles = await FileFinder.find( "file", path.join(outputPath, '**/*.*') )
+				// Remove all files which are not to keep from the output
+				for ( const file of allFiles )
+					if ( !filesToKeep.find( f => f.path === file.path ) )
+						await file.delete()
+			}
 			// If we need to bundle and minify output
 			let generatedFiles = []
 			let outputFileName = entryPointName + '.' + format

@@ -14,6 +14,8 @@
 		"typeRoots": ["./node_modules/@types"],
 		"types" : ["node"],
 
+		//"isolatedModules": false,
+
 		// ------------------------------------------------------------------------- OUTPUT
 
 		// Do not create d.ts files from typescript files
@@ -54,7 +56,8 @@
 		//"esModuleInterop" : true,
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
-		"incremental": true,
+		// FIXME : Can't work because we wipe de tmp directory ...
+		//"incremental": true,
 		"downlevelIteration" : false,
 
 		// ------------------------------------------------------------------------- LOGGING
