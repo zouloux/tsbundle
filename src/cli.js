@@ -142,7 +142,7 @@ CLICommands.add("build", async (cliArguments, cliOptions) => {
 				["File", "Module", "Target", "Output", "Bundle", "Size", "GZip"],
 				...reports
 			]
-			table(reports, true, [20], '    ')
+			table(reports, true, [20], '  ')
 			newLine()
 		})
 	})

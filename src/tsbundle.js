@@ -320,7 +320,8 @@ exports.buildPackage = async function ( packageConfig, progressHandler ) {
 				// Input
 				path.relative( packageConfig.packageRoot, fileConfig.input ),
 				// Module & target
-				module, target,
+				module === "commonjs" ? "cjs" : module,
+				target,
 				// Output
 				path.join( fileConfig.output, outputFileName ),
 			]
