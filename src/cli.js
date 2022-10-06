@@ -139,7 +139,7 @@ CLICommands.add("build", async (cliArguments, cliOptions) => {
 			if (!reports) return;
 			newLine()
 			reports = [
-				["File", "Module", "Target", "Output", "Bundle", "Size", "GZip"],
+				["File", "Compiled to", "Output", "Bundle", "Size", "GZip"],
 				...reports
 			]
 			table(reports, true, [20], '  ')

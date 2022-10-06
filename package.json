@@ -1,6 +1,6 @@
 {
   "name": "@zouloux/tsbundle",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Compile your Typescript libraries to ESM, CommonJS and optimized browser package.",
   "main": "src/tsbundle.js",
   "bin": {
