@@ -21,6 +21,7 @@ exports.defaultTerserOptions = [
 		'unsafe_methods=true',
 		'unsafe_undefined=true',
 		'keep_fargs=false',
+		'conditionals=false'
 	].join(","),
 	// Mangle variables and functions
 	'--mangle', [
